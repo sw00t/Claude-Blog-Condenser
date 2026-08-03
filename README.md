@@ -64,9 +64,21 @@ cost tracking. The short version for repeat setups:
 - Failed runs only:   `ant beta:deployment-runs list --deployment-id $ID --has-error`
 - Pause / resume:     `ant beta:deployments pause|unpause --deployment-id $ID`
 - Manual run:         `ant beta:deployments run --deployment-id $ID`
-- Update the persona: edit `agent/system-prompt.md`, then
-  `ant beta:agents update --agent-id $AGENT_ID --system "$(cat agent/system-prompt.md)"`
+- Update the persona: edit `agent/system-prompt.md`, then **both** of:
+  ```sh
+  ant beta:agents update --agent-id $AGENT_ID --system "$(cat agent/system-prompt.md)"
+  ant beta:deployments update --deployment-id $DEPLOYMENT_ID --agent $AGENT_ID  # re-pin!
+  ```
+  ‼️ **The deployment pins an agent version and does not follow `latest`.**
+  Passing a bare agent ID to `deployments create` resolves it to a concrete
+  version *once*, at creation, and freezes it — unlike `sessions.create`, where
+  a bare ID means "latest at session start". Skip the re-pin and every
+  `agents update` is silently ignored by the schedule: runs keep using the
+  version pinned on day one, with no error anywhere. Confirm with
+  `ant beta:deployments retrieve --deployment-id $DEPLOYMENT_ID --transform agent`.
 - Update the runbook: just commit `agent/task-prompt.md`; next run picks it up.
+  This is the whole reason the runbook lives in the repo rather than the system
+  prompt — it sidesteps both the `agents update` and the re-pin step.
 
 ## Known caveats
 

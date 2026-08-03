@@ -54,6 +54,15 @@ Cap fetches at `<max_new_fetches_per_run>`. If more posts qualify, fetch the
 most recently published ones first and note the shortfall in `last_sync.json`
 `notes`; the next run picks up the rest. Never silently drop the overflow.
 
+**A shortfall is a success, not a failure.** On a first run the whole window is
+new, so the backfill is *designed* to take several runs — each one commits its
+batch and leaves the rest for the next. Having more work than fits in one run
+is the normal case, never a reason to invoke the failure protocol. Commit what
+you fetched and stop cleanly. The same applies if you are running low on room
+mid-run: stop fetching, commit the posts you have fully processed, record how
+many remain, and end the turn. Partial progress that is committed and recorded
+always beats an all-or-nothing run that lands nothing.
+
 ## 4. Fetch and extract
 
 For each post to fetch, retrieve the page and extract:
@@ -124,8 +133,19 @@ quiet day is the expected case for a daily incremental sync.
 
 ## 8. Failure protocol
 
-Triggered by: unparseable existing `data/posts.json`, zero posts discovered, all
-sources unreachable, or schema validation failure.
+Triggered by exactly four things: unparseable existing `data/posts.json`, zero
+posts discovered, all sources unreachable, or schema validation failure.
+
+**Nothing else is a failure.** Specifically, none of these are — do not file an
+issue for any of them:
+
+- More posts to fetch than fit in one run (step 3 — commit the batch and stop).
+- Individual posts skipped for a missing date (step 4 — record in `skipped`).
+- No new posts today (step 7 — report "no changes" and commit nothing).
+
+If you are tempted to file an issue recommending that the pipeline be
+redesigned, batched, or resumed across runs: don't. That is already how it
+works. Commit your batch and end the turn.
 
 1. **Commit nothing.** Leave the repo exactly as you found it.
 2. File a GitHub issue on `sw00t/claude-blog-reader` using the **GitHub MCP
