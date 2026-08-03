@@ -112,9 +112,10 @@ cost tracking. The short version for repeat setups:
   with a `session.error`, so the issue-on-failure protocol silently never fires.
 - Billing is API-side: per token plus a per-session-hour charge. A daily
   incremental sync of this blog is a short session; the first backfill
-  (~6 months of posts) is the only long one. Track spend with
-  tools/cost_report.py (day | week | month | ytd; needs an Admin API key and
-  an organization — see SETUP-GUIDE.md Phase 0).
+  (~6 months of posts) is the only long one. **Check spend on the Console Cost
+  page.** `tools/cost_report.py` is a dead path: it needs an Admin API key, and
+  those cannot be created on individual accounts. The file is kept for
+  reference only.
 - The agent runs claude-haiku-4-5 for cost. If extraction fidelity or TL;DR
   quality lags, switch to claude-sonnet-5:
   `ant beta:agents update --agent-id $AGENT_ID --model '{id: claude-sonnet-5}'`

@@ -89,6 +89,28 @@
           "minimum": 1,
           "description": "Whitespace-delimited word count of body_text."
         },
+        "category": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60,
+          "description": "Category as printed on the blog index card, verbatim. Omit if the card shows none."
+        },
+        "figures": {
+          "type": "array",
+          "default": [],
+          "description": "In-article figures, in document order. Each n corresponds to a [[figure:n]] marker in body_text.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["n", "src"],
+            "properties": {
+              "n": { "type": "integer", "minimum": 1 },
+              "src": { "type": "string", "format": "uri" },
+              "alt": { "type": "string" },
+              "caption": { "type": "string" }
+            }
+          }
+        },
         "fetched_at": { "type": "string", "format": "date-time" },
         "content_hash": {
           "type": "string",

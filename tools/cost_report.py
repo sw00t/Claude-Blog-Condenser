@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# DEAD PATH — this script cannot work. It requires an Anthropic Admin API key,
+# and Admin API keys cannot be created on individual accounts (they need an
+# organization). Kept for reference only; do not try to fix it. Check spend on
+# the Console Cost page instead.
 """Cost tracker for the blog-reader Managed Agent.
 
 Queries Anthropic's Usage & Cost Admin API (cost report) and prints total spend

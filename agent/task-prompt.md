@@ -31,6 +31,13 @@ Reading it end to end each run is the single biggest avoidable token cost here.
 **Do not retry a failing approach more than twice.** Two attempts, then take the
 documented alternative or stop. Loops are what make a run expensive.
 
+Varying the request is **the same approach**, not a new one. Adding or removing
+a trailing slash, swapping the user agent, changing headers, or re-requesting
+the same URL another way all count against the same two attempts — they do not
+start a fresh pair. Two failed fetches of a URL means that URL is unreachable:
+go to the failure protocol instead of cycling variants. State the number of
+attempts you actually made when you report or file an issue.
+
 ## 1. Load state
 
 1. Read `config.json`.
@@ -82,6 +89,11 @@ For each discovered post collect: URL, title, and publication date. Derive `id`
 as the slug of the URL path — lowercase, hyphen-separated, matching the schema
 pattern. An `id` is permanent: once a post is in `data/posts.json`, never
 recompute or change its `id`, even if the source URL changes.
+
+Also collect `category` — the category label printed on that post's card on the
+index page, copied verbatim (for example `Product announcements`, `Enterprise
+AI`, `Claude Code`, `Agents`). If a card shows no category, omit the field.
+Never infer a category from the title or body.
 
 If discovery yields **zero** posts, that is a crawler failure, not an empty
 week — go to the failure protocol. A working sync with no new posts is normal
@@ -153,6 +165,22 @@ For each post to fetch, retrieve the page and extract:
   chrome — re-clean it. Also sanity-check that `body_text` does not begin by
   repeating `title`. A post whose body you cannot clean is a skip (record it in
   `skipped`), not a failure.
+
+  **Figures.** When you hit an image inside the article body, do not drop it.
+  Emit a line containing only `[[figure:N]]` at that exact position in
+  `body_text`, numbering from 1 in document order, and append an entry to
+  `figures` with the absolute image URL as `src`, the image's alt text as `alt`
+  if present, and the `figcaption` text as `caption` if present. Omit `alt` or
+  `caption` rather than inventing them.
+
+  Only article images count. Do not capture the page's hero or cover art,
+  author avatars, logos in the site chrome, newsletter or footer graphics, or
+  tracking pixels. If you cannot tell whether an image is part of the article,
+  leave it out — a missing figure is a much smaller problem than a page-chrome
+  image appearing mid-article.
+
+  `[[figure:N]]` markers are the only markup permitted in `body_text`. The
+  chrome self-check still applies to everything else.
 - `title`, `published_at`, `authors`, `tags` — from the page. Omit `authors` or
   `tags` entirely if the page does not state them. **Never guess a date.** If
   you cannot find a publication date, treat that post as a failure for that
@@ -214,6 +242,10 @@ cannot:
   remains do not appear verbatim in that post's `body_text`. A `tldr` that
   fails this is a generation failure — rewrite it yourself (step 5), do not
   commit it, and do not escalate it as a schema failure.
+- **`[[figure:N]]` markers and `figures` entries correspond one-to-one.** Every
+  marker in `body_text` has a matching `n` in that post's `figures`, and every
+  entry in `figures` has a matching marker. A mismatch is a per-post skip
+  (record it in `skipped`), not a run failure.
 
 **If validation fails, stop. Commit nothing.** Go to the failure protocol. This
 is the single most important rule in this runbook: a run that writes nothing is

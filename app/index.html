@@ -68,14 +68,22 @@ h2 button{text-align:left;display:block;width:100%}
 .cat{display:inline-block;margin-bottom:5px;padding:2px 7px;border:1px solid var(--line);
   border-radius:4px;color:var(--dim);font:500 10px/1.5 var(--mono);
   text-transform:uppercase;letter-spacing:.06em}
-.tldr{margin:7px 0 0;color:var(--dim)}
-.meta{display:flex;gap:12px;margin-top:8px;color:var(--faint);align-items:center;flex-wrap:wrap}
+.tldr{margin:7px 0 0;color:var(--dim);display:none}
+.meta{display:none;gap:12px;margin-top:8px;color:var(--faint);
+  align-items:center;flex-wrap:wrap}
+.post.open .tldr{display:block}
+.post.open .meta{display:flex}
 .meta button,.meta a{color:var(--accent);text-decoration:none}
 .body{margin-top:14px;display:none}
-.post.open .body{display:block}
+.post.full .body{display:block}
 .body p{margin:0 0 .85em}
 .body h3{margin:1.5em 0 .5em;font:600 calc(var(--fs) * 1.02)/1.3 var(--sans);letter-spacing:.01em}
 .body .end{margin-top:1.3em;padding-top:.9em;border-top:1px solid var(--line);color:var(--faint)}
+.body figure{margin:1.2em 0}
+.body figure img{width:100%;height:auto;display:block;border:1px solid var(--line);
+  border-radius:6px;background:var(--surface)}
+.body figcaption{margin-top:6px;color:var(--faint);
+  font:500 11px/1.45 var(--mono);letter-spacing:.03em}
 
 .gap{display:grid;grid-template-columns:var(--rail) 1fr;gap:0 12px;padding:9px 0;align-items:center}
 .gap span{grid-column:2;display:flex;align-items:center;gap:9px;color:var(--faint);
@@ -101,6 +109,7 @@ h2 button{text-align:left;display:block;width:100%}
     <span class="count" id="unread"></span>
     <span class="spacer"></span>
     <button class="tool" id="density">cozy</button>
+    <button class="tool" id="summaries">titles</button>
     <button class="tool" id="theme">auto</button>
   </div>
   <input id="q" type="search" placeholder="Search titles and text" autocomplete="off" aria-label="Search posts">
@@ -126,6 +135,7 @@ const store = {
   set(k, v) { mem[k] = v; try { localStorage.setItem(k, v); } catch {} }
 };
 
+const DEFAULTS = { density: "compact", theme: "dark", summaries: "0" };
 const DENSITY = ["cozy", "compact", "roomy"];
 const THEMES  = ["auto", "dark", "light"];
 const WINDOWS = [{ l: "30d", d: 30 }, { l: "3mo", d: 92 }, { l: "6mo", d: 183 }, { l: "All", d: 100000 }];
@@ -140,6 +150,7 @@ try { read = new Set(JSON.parse(store.get("read", "[]"))); } catch (e) {}
 
 const saveRead = () => store.set("read", JSON.stringify([...read]));
 const unreadCount = () => posts.filter(p => !read.has(p.id)).length;
+const summariesOn = () => store.get("summaries", DEFAULTS.summaries) === "1";
 
 /* ---- text ------------------------------------------------------------ */
 
@@ -152,6 +163,8 @@ function reflow(text) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (!line) { flush(); continue; }
+    const fig = line.match(/^\[\[figure:(\d+)\]\]$/);
+    if (fig) { flush(); out.push({ t: "f", n: +fig[1] }); continue; }
     let next = "";
     for (let j = i + 1; j < lines.length; j++) { if (lines[j]) { next = lines[j]; break; } }
     const heading = line.length < 70 && next.length >= 80
@@ -168,6 +181,15 @@ function reflow(text) {
 }
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+
+function figureHTML(f) {
+  if (!f || !f.src) return "";
+  return '<figure><img loading="lazy" decoding="async" src="' + esc(f.src) + '"'
+    + ' alt="' + esc(f.alt || "") + '"'
+    + ' onerror="this.closest(\'figure\').remove()">'
+    + (f.caption ? "<figcaption>" + esc(f.caption) + "</figcaption>" : "")
+    + "</figure>";
+}
 const mins = w => Math.max(1, Math.ceil(w / 220));
 const day = s => new Date(s + "T00:00:00Z");
 const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -216,18 +238,23 @@ function render() {
   }
 
   let html = "";
+  const open = summariesOn();
   shown.forEach((p, i) => {
     const d = day(p.published_at), prev = shown[i - 1];
     if (prev) {
       const g = Math.round((day(prev.published_at) - d) / 86400000);
       if (g > 7) html += '<div class="gap"><span>' + g + ' days not captured</span></div>';
     }
+    const figs = new Map((p.figures || []).map(f => [f.n, f]));
     const body = reflow(p.body_text)
-      .map(b => b.t === "h" ? "<h3>" + esc(b.s) + "</h3>" : "<p>" + esc(b.s) + "</p>").join("");
-    html += '<article class="post' + (read.has(p.id) ? " seen" : "") + '" id="p-' + esc(p.id) + '">'
+      .map(b => b.t === "f" ? figureHTML(figs.get(b.n))
+              : b.t === "h" ? "<h3>" + esc(b.s) + "</h3>"
+              : "<p>" + esc(b.s) + "</p>").join("");
+    html += '<article class="post' + (read.has(p.id) ? " seen" : "") + (open ? " open" : "")
+      + '" id="p-' + esc(p.id) + '">'
       + '<div class="rail"><b>' + d.getUTCDate() + "</b>" + MON[d.getUTCMonth()] + "</div><div>"
       + (p.category ? '<span class="cat">' + esc(p.category) + "</span>" : "")
-      + '<h2><button data-toggle="' + esc(p.id) + '" aria-expanded="false">' + esc(p.title) + "</button></h2>"
+      + '<h2><button data-toggle="' + esc(p.id) + '" aria-expanded="' + open + '">' + esc(p.title) + "</button></h2>"
       + '<p class="tldr">' + esc(p.tldr) + "</p>"
       + '<div class="meta u"><span>' + mins(p.word_count) + " min</span>"
       + "<span>" + p.word_count.toLocaleString() + " words</span>"
@@ -251,12 +278,13 @@ function chips() {
 }
 
 function prefs() {
-  const den = store.get("density", "cozy"), th = store.get("theme", "auto");
+  const den = store.get("density", DEFAULTS.density), th = store.get("theme", DEFAULTS.theme);
   document.documentElement.dataset.density = den;
   if (th === "auto") delete document.documentElement.dataset.theme;
   else document.documentElement.dataset.theme = th;
   document.getElementById("density").textContent = den;
   document.getElementById("theme").textContent = th;
+  document.getElementById("summaries").textContent = summariesOn() ? "summaries" : "titles";
   const dark = th === "dark" || (th === "auto" && matchMedia("(prefers-color-scheme:dark)").matches);
   document.getElementById("tc").content = dark ? THEME_BG.dark : THEME_BG.light;
 }
@@ -277,17 +305,30 @@ function toast(msg, label, fn) {
 
 function setOpen(art, open) {
   art.classList.toggle("open", open);
-  art.querySelectorAll("[aria-expanded]").forEach(b => b.setAttribute("aria-expanded", String(open)));
+  if (!open) art.classList.remove("full");
+  const b = art.querySelector("h2 button");
+  if (b) b.setAttribute("aria-expanded", String(open));
+}
+
+function setFull(art, full) {
+  if (full) art.classList.add("open");
+  art.classList.toggle("full", full);
   const lbl = art.querySelector("[data-label]");
-  if (lbl) lbl.textContent = open ? "Hide text" : "Full text";
+  if (lbl) lbl.textContent = full ? "Hide text" : "Full text";
 }
 
 document.addEventListener("click", e => {
   const tog = e.target.closest("[data-toggle]");
   if (tog) {
     const id = tog.dataset.toggle, art = document.getElementById("p-" + id);
-    const open = !art.classList.contains("open");
-    setOpen(art, open);
+    let open;
+    if (tog.closest("h2")) {               // title toggles the summary
+      open = !art.classList.contains("open");
+      setOpen(art, open);
+    } else {                               // meta button toggles the article body
+      open = !art.classList.contains("full");
+      setFull(art, open);
+    }
     if (open && !read.has(id)) {           // opening a post is what marks it read
       read.add(id); saveRead();
       art.classList.add("seen");
@@ -315,9 +356,11 @@ document.addEventListener("click", e => {
   }
   const id = e.target.id;
   if (id === "density") {
-    store.set("density", DENSITY[(DENSITY.indexOf(store.get("density", "cozy")) + 1) % 3]); prefs();
+    store.set("density", DENSITY[(DENSITY.indexOf(store.get("density", DEFAULTS.density)) + 1) % 3]); prefs();
   } else if (id === "theme") {
-    store.set("theme", THEMES[(THEMES.indexOf(store.get("theme", "auto")) + 1) % 3]); prefs();
+    store.set("theme", THEMES[(THEMES.indexOf(store.get("theme", DEFAULTS.theme)) + 1) % 3]); prefs();
+  } else if (id === "summaries") {
+    store.set("summaries", summariesOn() ? "0" : "1"); prefs(); render();
   } else if (id === "refresh") {
     load(true);
   } else if (id === "markall") {
@@ -344,7 +387,7 @@ function openHash() {
   if (!m) return false;
   const art = document.getElementById("p-" + m[1]);
   if (!art) return false;
-  setOpen(art, true);
+  setFull(art, true);
   art.scrollIntoView();
   return true;
 }
