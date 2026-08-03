@@ -87,3 +87,4 @@ cost tracking. The short version for repeat setups:
 - If the deployment auto-pauses (archived environment/vault etc.), fix the
   resource and `unpause` — missed triggers are not backfilled.
 # claude-blog-reader
+# claude-blog-reader
