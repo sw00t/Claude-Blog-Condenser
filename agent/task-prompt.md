@@ -19,6 +19,19 @@ output paths. Values in angle brackets below refer to it, e.g. `<window_days>`.
 Compute `cutoff` = today (UTC) minus `<window_days>` days. Posts published
 before `cutoff` are out of window.
 
+### 1b. Repair stored TL;DRs (before touching the network)
+
+Check every stored post's `tldr` against the `<tldr>` word bounds. Regenerate
+any that fall outside them from that post's **stored `body_text`**. This needs
+no network access, so do it here, before discovery — otherwise a source outage
+blocks repairs that have nothing to do with the source.
+
+If discovery later fails and you enter the failure protocol, **still commit
+these repairs**. They are independent of the source, and the "commit nothing"
+rule exists to prevent publishing bad *sync* data, not to discard valid local
+fixes. Commit them as `<commit_prefix> YYYY-MM-DD (N tldrs repaired)` and say
+so in your report.
+
 ## 2. Discover
 
 Try `source.feed_candidates` in order, then fall back to scraping
@@ -195,7 +208,8 @@ If you are tempted to file an issue recommending that the pipeline be
 redesigned, batched, or resumed across runs: don't. That is already how it
 works. Commit your batch and end the turn.
 
-1. **Commit nothing.** Leave the repo exactly as you found it.
+1. **Commit no sync data.** The one exception is the TL;DR repairs from step
+   1b, which are source-independent and should still be committed.
 2. File a GitHub issue on `sw00t/claude-blog-reader` using the **GitHub MCP
    server** — not `git`, and not the `bash` tool. MCP is authenticated by the
    vault credential attached to this deployment; the repo's own token only
