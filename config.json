@@ -2,16 +2,16 @@
   "version": 1,
   "source": {
     "name": "Claude blog",
-    "index_url": "https://claude.com/blog",
-    "feed_candidates": [
-      "https://claude.com/blog/rss.xml",
-      "https://claude.com/blog/feed.xml",
-      "https://claude.com/rss.xml"
-    ]
+    "index_url": "https://claude.com/blog"
+  },
+  "scope": {
+    "mode": "index_first_page_only",
+    "follow_pagination": false,
+    "note": "Deliberate cost control. Only posts visible on the first render of index_url are discovered. Coverage of window_days accumulates over time as posts scroll off page 1 and are carried forward. Widening scope is a config change, not a runbook change."
   },
   "window_days": 180,
-  "max_posts_per_run": 40,
-  "max_new_fetches_per_run": 12,
+  "max_new_fetches_per_run": 6,
+  "max_page_fetches_per_run": 8,
   "tldr": {
     "min_words": 25,
     "max_words": 60
@@ -24,8 +24,6 @@
   "commit_prefix": "content: sync",
   "failure": {
     "issue_title_prefix": "crawler failure",
-    "issue_labels": [
-      "crawler-failure"
-    ]
+    "issue_labels": ["crawler-failure"]
   }
 }

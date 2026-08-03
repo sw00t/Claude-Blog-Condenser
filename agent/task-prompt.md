@@ -7,6 +7,30 @@ The repo is mounted at `/workspace/reader`. All paths below are relative to it.
 Read `config.json` first; it is the source of truth for the window, limits, and
 output paths. Values in angle brackets below refer to it, e.g. `<window_days>`.
 
+## 0. Run budget — read this first
+
+Sessions are billed by wall-clock time as well as tokens, so a run that wanders
+is expensive even when it eventually succeeds. Hard limits for one run:
+
+- At most `<max_page_fetches_per_run>` HTTP fetches, total, including the index.
+- At most `<max_new_fetches_per_run>` post bodies fetched and summarized.
+- Target under ten minutes of work. If you are past that and still going, stop:
+  commit what is fully processed, record the remainder in `notes`, end the turn.
+
+**Keep page HTML out of your context.** `claude.com` pages carry a large
+navigation, footer, and prompt-library shell around a small article. Fetch with
+`curl` in the sandbox, write the response to a file, and strip it to article
+text with a script — read only the stripped result. Never paste a raw page into
+your reasoning.
+
+**Do not load whole files you only need part of.** `data/posts.json` holds every
+stored `body_text` and is the largest thing in this repo. Use `jq` or python to
+read the fields you need (ids, hashes, dates, tldrs) and to write the file back.
+Reading it end to end each run is the single biggest avoidable token cost here.
+
+**Do not retry a failing approach more than twice.** Two attempts, then take the
+documented alternative or stop. Loops are what make a run expensive.
+
 ## 1. Load state
 
 1. Read `config.json`.
@@ -32,14 +56,27 @@ rule exists to prevent publishing bad *sync* data, not to discard valid local
 fixes. Commit them as `<commit_prefix> YYYY-MM-DD (N tldrs repaired)` and say
 so in your report.
 
-## 2. Discover
+## 2. Discover — first page only
 
-Try `source.feed_candidates` in order, then fall back to scraping
-`source.index_url`. Use the first source that yields a parseable list of posts.
-Record which one worked as `source_url`.
+Fetch `source.index_url` **once**. That single response is your entire
+discovery set. Record `source_url` as that URL.
 
-Follow pagination on the index until you reach posts older than `cutoff`, then
-stop. Do not crawl the whole archive.
+`scope.follow_pagination` is `false`. This is a deliberate cost limit, not an
+oversight:
+
+- **Do not** follow "View more", "Next", or any pagination link.
+- **Do not** construct paginated URLs. The site randomizes the pagination
+  query-param prefix on every render (the same page emits both
+  `?b7eea976_page=2` and `?d7430fcd_page=2`), so a constructed URL silently
+  returns page 1 again. Guessing here costs a fetch and yields nothing.
+- **Do not** fetch category archives, sitemaps, or feeds. None are in scope.
+- Seeing far fewer posts than `window_days` would suggest is **expected and
+  correct**. Do not treat it as a failure, do not note it as a shortfall, and
+  do not file an issue about incomplete coverage.
+
+Coverage of the full window builds up on its own: posts that scroll off page 1
+stay in `data/posts.json` and are carried forward until they age past `cutoff`.
+The dataset deepens week over week without ever crawling the archive.
 
 For each discovered post collect: URL, title, and publication date. Derive `id`
 as the slug of the URL path — lowercase, hyphen-separated, matching the schema
@@ -62,6 +99,11 @@ Partition the discovered set against existing `data/posts.json`:
   Carry the existing record forward verbatim.
 - **Prune** — record in `data/posts.json` whose `published_at` is before
   `cutoff`. Drop it, whether or not it still appears at the source.
+
+**Absence from page 1 is never a reason to drop a post.** Under
+`index_first_page_only` scope, most stored posts will not appear in today's
+discovery set at all. Date is the only prune criterion. A post disappears from
+`data/posts.json` when it ages out, never because you stopped seeing it.
 
 Cap fetches at `<max_new_fetches_per_run>`. If more posts qualify, fetch the
 most recently published ones first and note the shortfall in `last_sync.json`
@@ -127,6 +169,17 @@ keep the stored record and leave `fetched_at` as it was.
 Write a `tldr` for every new post, and for any changed post whose
 `content_hash` moved. Between `<tldr.min_words>` and `<tldr.max_words>` words.
 
+**Write it yourself, in your own words.** Never produce a `tldr` with bash,
+python, string slicing, truncation, or any other mechanical transformation of
+`body_text`. A summary assembled by code is invalid no matter what length it
+comes out at. Specifically forbidden: `title` concatenated with the opening of
+`body_text`; any span of more than eight consecutive words copied from
+`body_text`; any string that ends mid-word or mid-sentence.
+
+Scripting is correct for the mechanical parts of this runbook — hashing,
+counting words, diffing, assembling and validating JSON — and you should use it
+there. Summarizing is the one step that must come from you.
+
 - Ground it **only** in that post's `body_text`. No outside knowledge, no
   speculation about what a release "means".
 - Lead with what the post announces or argues, not with "This post…".
@@ -152,7 +205,15 @@ Assemble the full `posts.json` object: `version` 1, `generated_at` now,
 `window_days`, `source_url`, and `posts` sorted by `published_at` descending.
 
 Validate it against `data/posts.schema.json`. Also check, because the schema
-cannot: every `id` is unique, and every `published_at` is on or after `cutoff`.
+cannot:
+
+- every `id` is unique
+- every `published_at` is on or after `cutoff`
+- **no `tldr` is a mechanical slice of its `body_text`.** Script this: strip
+  the title prefix if present, then confirm the first forty characters of what
+  remains do not appear verbatim in that post's `body_text`. A `tldr` that
+  fails this is a generation failure — rewrite it yourself (step 5), do not
+  commit it, and do not escalate it as a schema failure.
 
 **If validation fails, stop. Commit nothing.** Go to the failure protocol. This
 is the single most important rule in this runbook: a run that writes nothing is
