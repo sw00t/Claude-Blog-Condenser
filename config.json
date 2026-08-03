@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "source": {
+    "name": "Claude blog",
+    "index_url": "https://claude.com/blog",
+    "feed_candidates": [
+      "https://claude.com/blog/rss.xml",
+      "https://claude.com/blog/feed.xml",
+      "https://claude.com/rss.xml"
+    ]
+  },
+  "window_days": 180,
+  "max_posts_per_run": 40,
+  "max_new_fetches_per_run": 40,
+  "tldr": {
+    "min_words": 25,
+    "max_words": 60
+  },
+  "output": {
+    "posts": "data/posts.json",
+    "schema": "data/posts.schema.json",
+    "last_sync": "data/last_sync.json"
+  },
+  "commit_prefix": "content: sync",
+  "failure": {
+    "issue_title_prefix": "crawler failure",
+    "issue_labels": ["crawler-failure"]
+  }
+}
