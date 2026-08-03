@@ -1,10 +1,10 @@
 {
-  "ran_at": "2026-08-03T01:30:45.201524Z",
+  "ran_at": "2026-08-03T02:08:06Z",
   "source_url": "https://claude.com/blog",
   "window_days": 180,
   "counts": {
-    "discovered": 15,
-    "new": 15,
+    "discovered": 25,
+    "new": 6,
     "changed": 0,
     "unchanged": 0,
     "pruned": 0,
@@ -12,6 +12,6 @@
   },
   "skipped": [],
   "notes": [
-    "Shortfall: 3 posts remain to fetch"
+    "First run under index_first_page_only scope: data/posts.json had been reset to empty by a prior config-change commit. 19 of the 25 posts discovered on page 1 were not fetched this run (max_new_fetches_per_run=6); the 6 most recently published were fetched. Remaining 19 will be picked up over subsequent runs as budget allows."
   ]
 }
