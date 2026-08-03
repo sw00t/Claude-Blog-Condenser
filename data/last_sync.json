@@ -1,17 +1,11 @@
 {
-  "ran_at": "2026-08-03T04:56:00Z",
+  "ran_at": "2026-08-03T05:13:32Z",
   "source_url": "https://claude.com/blog",
   "window_days": 180,
-  "counts": {
-    "discovered": 25,
-    "new": 6,
-    "changed": 0,
-    "unchanged": 6,
-    "pruned": 0,
-    "skipped": 0
-  },
+  "counts": { "discovered": 25, "new": 6, "changed": 0, "unchanged": 12, "pruned": 0, "skipped": 0 },
   "skipped": [],
   "notes": [
-    "19 posts on page 1 were new; max_new_fetches_per_run=6 capped this run to the 6 most recently published (down to 2026-07-17). 13 new posts remain unfetched and will be picked up in subsequent runs: ciso-guide-to-agentic-ai, ai-code-migration, working-with-claude-fable-5-in-claude-cowork, artifacts-in-claude-code, claude-for-foundation-models, claude-managed-agents-updates, new-in-claude-managed-agents, connectors-for-everyday-life, claude-managed-agents-memory, claude-code-desktop-redesign, preparing-your-security-program-for-ai-accelerated-offense, claude-managed-agents, harnessing-claudes-intelligence."
+    "19 posts on page 1 were new (13 remained after 6 were fetched in the prior run); max_new_fetches_per_run=6 capped this run to the 6 most recently published (down to 2026-05-19). 7 new posts remain unfetched and will be picked up in subsequent runs: new-in-claude-managed-agents, connectors-for-everyday-life, claude-managed-agents-memory, claude-code-desktop-redesign, preparing-your-security-program-for-ai-accelerated-offense, claude-managed-agents, harnessing-claudes-intelligence.",
+    "artifacts-in-claude-code contains one in-article video embed (no <img>); it was left out of figures/markers since only images are in scope."
   ]
 }
