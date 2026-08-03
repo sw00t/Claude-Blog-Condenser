@@ -112,9 +112,9 @@ Partition the discovered set against existing `data/posts.json`:
 - **Prune** — record in `data/posts.json` whose `published_at` is before
   `cutoff`. Drop it, whether or not it still appears at the source.
 
-**Absence from page 1 is never a reason to drop a post.** Under
-`index_first_page_only` scope, most stored posts will not appear in today's
-discovery set at all. Date is the only prune criterion. A post disappears from
+**Absence from page 1 is never a reason to drop a post.** Discovery only ever
+sees page 1, so most stored posts will not appear in today's discovery set at
+all. Date is the only prune criterion. A post disappears from
 `data/posts.json` when it ages out, never because you stopped seeing it.
 
 Cap fetches at `<max_new_fetches_per_run>`. If more posts qualify, fetch the
@@ -303,7 +303,7 @@ works. Commit your batch and end the turn.
 
 1. **Commit no sync data.** The one exception is the TL;DR repairs from step
    1b, which are source-independent and should still be committed.
-2. File a GitHub issue on `sw00t/claude-blog-reader` using the **GitHub MCP
+2. File a GitHub issue on `sw00t/Claude-Blog-Condenser` using the **GitHub MCP
    server** — not `git`, and not the `bash` tool. MCP is authenticated by the
    vault credential attached to this deployment; the repo's own token only
    covers clone and push.

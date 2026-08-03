@@ -1,11 +1,9 @@
 {
   "version": 1,
   "source": {
-    "name": "Claude blog",
     "index_url": "https://claude.com/blog"
   },
   "scope": {
-    "mode": "index_first_page_only",
     "follow_pagination": false,
     "note": "Deliberate cost control. Only posts visible on the first render of index_url are discovered. Coverage of window_days accumulates over time as posts scroll off page 1 and are carried forward. Widening scope is a config change, not a runbook change."
   },

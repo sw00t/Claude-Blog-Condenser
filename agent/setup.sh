@@ -31,12 +31,12 @@ case "$GITHUB_TOKEN" in
 esac
 
 # ── Fill these in ────────────────────────────────────────────────────────────
-REPO_URL="https://github.com/sw00t/claude-blog-reader"
-ENVIRONMENT_ID="env_01Ds1hNehF4UCQY25gsvxQKx"
-VAULT_ID="vlt_011Cdetr9ikJ1GQuQkYa1XS3"          # vault containing the GitHub MCP credential
+REPO_URL="https://github.com/YOUR_USER/Claude-Blog-Condenser"
+ENVIRONMENT_ID="REPLACE_ME"        # env_... from `ant beta:environments create` (README step 4)
+VAULT_ID="REPLACE_ME"              # vlt_... containing the GitHub MCP credential (README step 5)
 TIMEZONE="Etc/UTC"                 # IANA tz; avoid 1-3 AM local if you change it (DST)
 CRON="0 6 * * *"                   # daily 06:00 in $TIMEZONE
-MODEL="claude-haiku-4-5"           # cheapest fit; if extraction/TLDR quality lags, bump to claude-sonnet-5 (one-line change + ant beta:agents update)
+MODEL="claude-sonnet-5"            # Haiku extracts cleanly but writes mechanical TL;DRs and misses coverage gaps
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Fail fast on unfilled placeholders rather than creating a half-wired deployment.
