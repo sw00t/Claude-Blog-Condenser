@@ -1,12 +1,10 @@
 {
-  "ran_at": "2026-08-03T05:20:00Z",
+  "ran_at": "2026-08-03T05:43:32Z",
   "source_url": "https://claude.com/blog",
   "window_days": 180,
-  "counts": { "discovered": 25, "new": 6, "changed": 0, "unchanged": 18, "pruned": 0, "skipped": 0 },
+  "counts": { "discovered": 25, "new": 1, "changed": 0, "unchanged": 24, "pruned": 0, "skipped": 0 },
   "skipped": [],
   "notes": [
-    "1 post on page 1 (harnessing-claudes-intelligence) is new but was not fetched; max_new_fetches_per_run=6 capped this run to the 6 most recently published of the 7 outstanding new posts noted in the prior run. It will be picked up in a subsequent run.",
-    "claude-managed-agents-memory and claude-managed-agents each had testimonial-logo images in the DOM (Rakuten, Ando, Wisedocs, Asana, Sentry, Atlassian, Vibecode); these were excluded from figures as page chrome, not article content.",
-    "claude-code-desktop-redesign and preparing-your-security-program-for-ai-accelerated-offense have no in-article images."
+    "harnessing-claudes-intelligence (2026-04-02) was the last outstanding post noted in the prior run's shortfall; it is now fetched and stored. Page 1 discovery (25 posts) is otherwise fully covered by data/posts.json."
   ]
 }
