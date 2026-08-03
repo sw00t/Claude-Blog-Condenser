@@ -1,17 +1,17 @@
 {
-  "ran_at": "2026-08-03T02:08:06Z",
+  "ran_at": "2026-08-03T03:49:27Z",
   "source_url": "https://claude.com/blog",
   "window_days": 180,
   "counts": {
     "discovered": 25,
     "new": 6,
     "changed": 0,
-    "unchanged": 0,
+    "unchanged": 6,
     "pruned": 0,
     "skipped": 0
   },
   "skipped": [],
   "notes": [
-    "First run under index_first_page_only scope: data/posts.json had been reset to empty by a prior config-change commit. 19 of the 25 posts discovered on page 1 were not fetched this run (max_new_fetches_per_run=6); the 6 most recently published were fetched. Remaining 19 will be picked up over subsequent runs as budget allows."
+    "19 of 25 posts discovered on page 1 were new; max_new_fetches_per_run=6 so the 6 most recently published new posts were fetched (down to 2026-07-17). The remaining 13 new posts (artifacts-in-claude-code, claude-for-foundation-models, claude-managed-agents-updates, new-in-claude-managed-agents, connectors-for-everyday-life, claude-managed-agents-memory, claude-code-desktop-redesign, preparing-your-security-program-for-ai-accelerated-offense, claude-managed-agents, harnessing-claudes-intelligence, ciso-guide-to-agentic-ai, ai-code-migration, working-with-claude-fable-5-in-claude-cowork) will be picked up in subsequent runs."
   ]
 }
