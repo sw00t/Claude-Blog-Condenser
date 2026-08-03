@@ -122,6 +122,17 @@ Write a `tldr` for every new post, and for any changed post whose
 Reuse the existing `tldr` verbatim for unchanged posts. Never regenerate a TL;DR
 you do not have to — it is the main cost driver of a run.
 
+**Count the words before you accept each TL;DR.** If it falls outside the
+bounds, rewrite it until it fits. This is a quality rule you fix in place, not
+a validation failure: a short TL;DR is never a reason to abort the run or file
+an issue.
+
+**Self-heal on load.** Also check the TL;DRs of posts already in
+`data/posts.json`. Any that fall outside the bounds — from an earlier run or a
+config change — get regenerated from their **stored `body_text`**. That needs
+no re-fetch and no network, so it is cheap; do it as part of the normal run and
+count those posts as `changed`.
+
 ## 6. Validate — the gate
 
 Assemble the full `posts.json` object: `version` 1, `generated_at` now,
@@ -164,12 +175,21 @@ quiet day is the expected case for a daily incremental sync.
 Triggered by exactly four things: unparseable existing `data/posts.json`, zero
 posts discovered, all sources unreachable, or schema validation failure.
 
+"Schema validation failure" means **the document fails a structural check
+against `data/posts.schema.json`** — a missing required field, a wrong type, a
+malformed hash or date, an unknown property. It does not mean "something about
+the data looks wrong to me". If you can state the problem only in prose and not
+as a schema rule the document violates, it is not a validation failure.
+
 **Nothing else is a failure.** Specifically, none of these are — do not file an
 issue for any of them:
 
 - More posts to fetch than fit in one run (step 3 — commit the batch and stop).
 - Individual posts skipped for a missing date (step 4 — record in `skipped`).
 - No new posts today (step 7 — report "no changes" and commit nothing).
+- A TL;DR outside the configured word bounds (step 5 — rewrite it in place).
+  The bounds live in `config.json`, not in the schema; a short TL;DR validates
+  fine and is yours to fix, not to escalate.
 
 If you are tempted to file an issue recommending that the pipeline be
 redesigned, batched, or resumed across runs: don't. That is already how it

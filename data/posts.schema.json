@@ -77,7 +77,7 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 600,
-          "description": "Agent-written summary, within config.tldr word bounds. Must be grounded in body_text only."
+          "description": "Agent-written summary, grounded in body_text only. NOTE: the word bounds in config.tldr are a quality rule enforced by the runbook, NOT by this schema. A TL;DR outside those bounds still validates here and must be rewritten in-run, never escalated as a validation failure."
         },
         "body_text": {
           "type": "string",
