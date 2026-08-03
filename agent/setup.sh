@@ -50,14 +50,35 @@ for var in REPO_URL ENVIRONMENT_ID VAULT_ID; do
 done
 
 echo "Creating agent..."
+# `tools` goes in the stdin body, not --tool flags, for two reasons:
+#   1. permission_policy MUST be always_allow. An mcp_toolset left at its
+#      default evaluates to "ask": the session goes idle with
+#      stop_reason=requires_action waiting for a user.tool_confirmation that
+#      nobody sends on a cron run, so the failure protocol hangs instead of
+#      filing an issue. Verified by smoke test - see README "Known caveats".
+#   2. The --tool flag's relaxed-YAML parser rejects this depth of nesting
+#      ("Failed to parse request body: unexpected token {").
+# Flags below still win over stdin on the keys they set.
 agent=$(ant beta:agents create \
   --name "Blog Reader Ingest" \
   --model "{id: $MODEL}" \
   --system "$(cat system-prompt.md)" \
   --mcp-server '{type: url, name: github, url: https://api.githubcopilot.com/mcp/}' \
-  --tool '{type: agent_toolset_20260401}' \
-  --tool '{type: mcp_toolset, mcp_server_name: github}' \
-  --format json)
+  --format json <<'YAML'
+tools:
+  - type: agent_toolset_20260401
+    default_config:
+      enabled: true
+      permission_policy:
+        type: always_allow
+  - type: mcp_toolset
+    mcp_server_name: github
+    default_config:
+      enabled: true
+      permission_policy:
+        type: always_allow
+YAML
+)
 AGENT_ID=$(jq -r '.id' <<<"$agent")
 echo "AGENT_ID=$AGENT_ID"
 

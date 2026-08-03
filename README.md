@@ -77,6 +77,14 @@ cost tracking. The short version for repeat setups:
   Create Deployment (`ant beta:deployments create --help`) and take the same
   shapes as on Create Session:
   https://platform.claude.com/docs/en/api/beta/deployments/create
+- **MCP tools must be `always_allow` for unattended runs.** An `mcp_toolset`
+  left at its default evaluates to `ask`: the session goes idle with
+  `stop_reason: requires_action` waiting for a `user.tool_confirmation` that no
+  one sends on a scheduled run. The failure protocol would hang instead of
+  filing an issue, and the run would burn a session hour doing nothing. The
+  built-in `agent_toolset` does not have this problem (bash/read/write run
+  unprompted), so the symptom only appears on the failure path — the path you
+  least want to discover broken. `setup.sh` sets the policy explicitly.
 - GitHub MCP auth comes from the **vault**, not from the repo resource. The
   repo's `authorization_token` is injected by the Anthropic git proxy for
   clone/pull/push only; the MCP server needs a credential in a vault attached
