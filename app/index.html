@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Blog Reader</title>
+<title>Claude Blog Condenser</title>
 <meta name="theme-color" content="#0F1218" id="tc">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.webmanifest">
@@ -42,8 +42,13 @@ header{position:sticky;top:0;z-index:10;background:var(--bg);border-bottom:1px s
 .spacer{flex:1}
 .tool{padding:6px 9px;border:1px solid var(--line);border-radius:6px;color:var(--dim);
   font:600 11px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase}
-#q{width:100%;margin-top:9px;padding:9px 11px;background:var(--surface);color:var(--ink);
+#q{display:none;width:100%;margin-top:9px;padding:9px 11px;background:var(--surface);color:var(--ink);
   border:1px solid var(--line);border-radius:7px;font:inherit}
+#q.show{display:block}
+#search{padding:6px 8px;line-height:0}
+#search svg{width:13px;height:13px;display:block;fill:none;stroke:currentColor;
+  stroke-width:1.7;stroke-linecap:round}
+#search[aria-expanded="true"]{color:var(--bg);background:var(--accent);border-color:var(--accent)}
 #q::placeholder{color:var(--faint)}
 .chips{display:flex;gap:6px;margin-top:9px;overflow-x:auto;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
@@ -105,9 +110,12 @@ h2 button{text-align:left;display:block;width:100%}
 
 <header>
   <div class="bar">
-    <span class="brand">Blog Reader</span>
+    <span class="brand">Claude Blog Condenser</span>
     <span class="count" id="unread"></span>
     <span class="spacer"></span>
+    <button class="tool" id="search" aria-label="Search posts" aria-expanded="false">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.6"/><path d="M10.4 10.4 14 14"/></svg>
+    </button>
     <button class="tool" id="density">cozy</button>
     <button class="tool" id="summaries">titles</button>
     <button class="tool" id="theme">auto</button>
@@ -354,8 +362,12 @@ document.addEventListener("click", e => {
     }
     chips(); render(); return;
   }
-  const id = e.target.id;
-  if (id === "density") {
+  // Resolve through the button: #search holds an <svg>, so e.target is the
+  // svg/path on a hit, not the button itself.
+  const id = (e.target.closest("button") || e.target).id;
+  if (id === "search") {
+    toggleSearch();
+  } else if (id === "density") {
     store.set("density", DENSITY[(DENSITY.indexOf(store.get("density", DEFAULTS.density)) + 1) % 3]); prefs();
   } else if (id === "theme") {
     store.set("theme", THEMES[(THEMES.indexOf(store.get("theme", DEFAULTS.theme)) + 1) % 3]); prefs();
@@ -368,10 +380,24 @@ document.addEventListener("click", e => {
   }
 });
 
+// Search collapses to an icon; clear the query on close so a hidden filter
+// can never stay silently applied.
+function toggleSearch(force) {
+  const q = document.getElementById("q");
+  const show = force === undefined ? !q.classList.contains("show") : force;
+  q.classList.toggle("show", show);
+  document.getElementById("search").setAttribute("aria-expanded", String(show));
+  if (show) q.focus();
+  else if (q.value) { q.value = ""; query = ""; render(); }
+}
+
 let qt;
 document.getElementById("q").addEventListener("input", e => {
   clearTimeout(qt);
   qt = setTimeout(() => { query = e.target.value.trim(); render(); }, 140);
+});
+document.getElementById("q").addEventListener("keydown", e => {
+  if (e.key === "Escape") toggleSearch(false);
 });
 
 let st;

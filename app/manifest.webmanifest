@@ -1,6 +1,6 @@
 {
-  "name": "Claude Blog Reader",
-  "short_name": "Blog Reader",
+  "name": "Claude Blog Condenser",
+  "short_name": "Condenser",
   "description": "Text-first reader for the Claude blog.",
   "start_url": "./index.html",
   "scope": "./",

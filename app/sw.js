@@ -1,6 +1,6 @@
 // Cache-first for the shell, stale-while-revalidate for content.
 // Bump SHELL_V whenever index.html changes, or clients keep the old shell.
-const SHELL_V = "shell-v3";
+const SHELL_V = "shell-v4";
 const DATA_V  = "data-v1";
 const IMG_V   = "img-v1";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest",
