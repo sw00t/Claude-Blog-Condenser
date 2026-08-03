@@ -14,8 +14,13 @@ is expensive even when it eventually succeeds. Hard limits for one run:
 
 - At most `<max_page_fetches_per_run>` HTTP fetches, total, including the index.
 - At most `<max_new_fetches_per_run>` post bodies fetched and summarized.
-- Target under ten minutes of work. If you are past that and still going, stop:
-  commit what is fully processed, record the remainder in `notes`, end the turn.
+- **Hard stop at ten minutes.** This is a limit, not a target. Your very first
+  action this run is `date -u +%s`; keep that number. Re-check it with the same
+  command immediately before each post fetch. Once 600 seconds have elapsed,
+  stop fetching at once: commit whatever is fully processed, record the rest in
+  `notes`, and end the turn. Never spend the budget on "almost done" — a run
+  that lands two posts inside the limit is a better run than one that lands six
+  and overruns. Report the elapsed seconds at the end of every run.
 
 **Keep page HTML out of your context.** `claude.com` pages carry a large
 navigation, footer, and prompt-library shell around a small article. Fetch with
@@ -56,6 +61,15 @@ Check every stored post's `tldr` against the `<tldr>` word bounds. Regenerate
 any that fall outside them from that post's **stored `body_text`**. This needs
 no network access, so do it here, before discovery — otherwise a source outage
 blocks repairs that have nothing to do with the source.
+
+**Do this check with one script, not by reading posts.** A `jq` or python
+one-liner over `data/posts.json` that prints each `id` whose `tldr` word count
+is out of bounds costs almost nothing and does not grow as the dataset grows.
+Only load `body_text` for the ids that script actually returns — usually none.
+The same applies to every whole-dataset check in this runbook (step 6's
+uniqueness, cutoff, anti-slice, and figure-marker checks): script them over the
+file. Per-run cost must scale with the posts you *fetch*, never with the posts
+you already have.
 
 If discovery later fails and you enter the failure protocol, **still commit
 these repairs**. They are independent of the source, and the "commit nothing"
