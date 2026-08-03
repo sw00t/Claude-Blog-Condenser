@@ -73,17 +73,23 @@ cost tracking. The short version for repeat setups:
 - Managed Agents is in beta (`managed-agents-2026-04-01` header; the CLI/SDK set
   it automatically). Field names can change behind new dated headers — this repo
   IS the version-controlled source of truth so the setup can be re-created.
-- Verify the deployment `resources` block against the Create Deployment reference
-  before first run (see comment in setup.sh):
+- The deployment's `resources` and `vault_ids` blocks are confirmed valid on
+  Create Deployment (`ant beta:deployments create --help`) and take the same
+  shapes as on Create Session:
   https://platform.claude.com/docs/en/api/beta/deployments/create
+- GitHub MCP auth comes from the **vault**, not from the repo resource. The
+  repo's `authorization_token` is injected by the Anthropic git proxy for
+  clone/pull/push only; the MCP server needs a credential in a vault attached
+  via `vault_ids`. Without it the session still starts and then fails mid-run
+  with a `session.error`, so the issue-on-failure protocol silently never fires.
 - Billing is API-side: per token plus a per-session-hour charge. A daily
   incremental sync of this blog is a short session; the first backfill
   (~6 months of posts) is the only long one. Track spend with
   tools/cost_report.py (day | week | month | ytd; needs an Admin API key and
   an organization — see SETUP-GUIDE.md Phase 0).
 - The agent runs claude-haiku-4-5 for cost. If extraction fidelity or TL;DR
-  quality lags, switch to claude-sonnet-4-6:
-  `ant beta:agents update --agent-id $AGENT_ID --model '{id: claude-sonnet-4-6}'`
+  quality lags, switch to claude-sonnet-5:
+  `ant beta:agents update --agent-id $AGENT_ID --model '{id: claude-sonnet-5}'`
 - If the deployment auto-pauses (archived environment/vault etc.), fix the
   resource and `unpause` — missed triggers are not backfilled.
 # claude-blog-reader
