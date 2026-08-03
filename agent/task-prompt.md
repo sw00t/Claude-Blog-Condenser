@@ -67,9 +67,37 @@ always beats an all-or-nothing run that lands nothing.
 
 For each post to fetch, retrieve the page and extract:
 
-- `body_text` — the article body as plain text. Strip navigation, headers,
-  footers, cookie banners, share widgets, and "related posts". Keep paragraph
-  breaks as newlines. No HTML, no Markdown.
+- `body_text` — the article body as plain text, and **only** the article body.
+  Keep paragraph breaks as newlines. No HTML, no Markdown.
+
+  A `claude.com/blog` page wraps the article in chrome you must remove. The
+  page begins with a metadata block that looks like this — drop all of it,
+  including the repeated title:
+
+  ```
+  <title>
+  Category
+  Product announcements        <- one or more category/product lines
+  Date
+  July 28, 2026
+  Reading time
+  5
+  min
+  Share
+  Copy link
+  https://claude.com/blog/...
+  ```
+
+  `body_text` starts at the **first sentence of actual prose** after that
+  block. It ends at the **last sentence of the article**: drop any trailing
+  "Related posts", "Subscribe", newsletter signup, or footer navigation.
+
+  **Self-check before you accept the extraction.** None of these strings may
+  appear anywhere in `body_text`: `Reading time`, `Copy link`, `Share`,
+  `Category`, `Related posts`, `Subscribe`. If any does, you have captured
+  chrome — re-clean it. Also sanity-check that `body_text` does not begin by
+  repeating `title`. A post whose body you cannot clean is a skip (record it in
+  `skipped`), not a failure.
 - `title`, `published_at`, `authors`, `tags` — from the page. Omit `authors` or
   `tags` entirely if the page does not state them. **Never guess a date.** If
   you cannot find a publication date, treat that post as a failure for that

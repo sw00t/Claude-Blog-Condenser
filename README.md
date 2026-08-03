@@ -89,6 +89,14 @@ cost tracking. The short version for repeat setups:
   Create Deployment (`ant beta:deployments create --help`) and take the same
   shapes as on Create Session:
   https://platform.claude.com/docs/en/api/beta/deployments/create
+- **Changing the extraction rules does not re-extract existing posts.** The
+  diff in step 3 re-fetches only on a title or date change, so posts already in
+  `data/posts.json` keep whatever `body_text` they were captured with. After
+  editing the extraction spec in `task-prompt.md`, delete `data/posts.json` and
+  let the next runs rebuild it — the window re-backfills at
+  `max_new_fetches_per_run` posts per run. There is deliberately no
+  `extraction_version` auto-invalidation; it would add machinery for something
+  that changes rarely, but the tradeoff is that you must remember the reset.
 - **MCP tools must be `always_allow` for unattended runs.** An `mcp_toolset`
   left at its default evaluates to `ask`: the session goes idle with
   `stop_reason: requires_action` waiting for a `user.tool_confirmation` that no
