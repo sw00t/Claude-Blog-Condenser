@@ -1,17 +1,17 @@
 {
-  "ran_at": "2026-08-03T03:49:27Z",
+  "ran_at": "2026-08-03T04:28:00Z",
   "source_url": "https://claude.com/blog",
   "window_days": 180,
   "counts": {
     "discovered": 25,
     "new": 6,
     "changed": 0,
-    "unchanged": 6,
+    "unchanged": 0,
     "pruned": 0,
     "skipped": 0
   },
   "skipped": [],
   "notes": [
-    "19 of 25 posts discovered on page 1 were new; max_new_fetches_per_run=6 so the 6 most recently published new posts were fetched (down to 2026-07-17). The remaining 13 new posts (artifacts-in-claude-code, claude-for-foundation-models, claude-managed-agents-updates, new-in-claude-managed-agents, connectors-for-everyday-life, claude-managed-agents-memory, claude-code-desktop-redesign, preparing-your-security-program-for-ai-accelerated-offense, claude-managed-agents, harnessing-claudes-intelligence, ciso-guide-to-agentic-ai, ai-code-migration, working-with-claude-fable-5-in-claude-cowork) will be picked up in subsequent runs."
+    "First run: data/posts.json was absent (reset alongside a schema change in the prior commit), so all 25 posts discovered on page 1 were treated as new. max_new_fetches_per_run=6, so the 6 most recently published were fetched (down to 2026-07-23). The remaining 19 new posts (building-verification-loops-in-claude-code-with-skills, how-outtake-built-a-cyber-investigator-on-claude, how-anthropic-secures-its-ai-native-software-development-lifecycle, how-datadog-built-a-universal-machine-tool-for-claude-code, working-at-the-frontier-rakuten, working-at-the-frontier-cursor, ciso-guide-to-agentic-ai, ai-code-migration, working-with-claude-fable-5-in-claude-cowork, artifacts-in-claude-code, claude-for-foundation-models, claude-managed-agents-updates, new-in-claude-managed-agents, connectors-for-everyday-life, claude-managed-agents-memory, claude-code-desktop-redesign, preparing-your-security-program-for-ai-accelerated-offense, claude-managed-agents, harnessing-claudes-intelligence) will be picked up in subsequent runs."
   ]
 }
