@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Blog Reader</title>
+<meta name="theme-color" content="#0F1218" id="tc">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#F0F1F4; --surface:#FFFFFF; --line:#DDE0E8;
+  --ink:#131722; --dim:#5A6474; --accent:#4B57C8; --faint:#8A93A6;
+  --fs:16px; --lh:1.55; --row-gap:22px; --rail:56px;
+  --mono:ui-monospace,"Roboto Mono",Menlo,Consolas,monospace;
+  --sans:system-ui,"Roboto","Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0F1218;--surface:#161A23;--line:#262C3A;--ink:#E2E5EE;--dim:#8A93A6;--accent:#8E9BF0;--faint:#5C6478}
+}
+html[data-theme="light"]{--bg:#F0F1F4;--surface:#FFFFFF;--line:#DDE0E8;--ink:#131722;--dim:#5A6474;--accent:#4B57C8;--faint:#8A93A6}
+html[data-theme="dark"]{--bg:#0F1218;--surface:#161A23;--line:#262C3A;--ink:#E2E5EE;--dim:#8A93A6;--accent:#8E9BF0;--faint:#5C6478}
+html[data-density="compact"]{--fs:14.5px;--lh:1.42;--row-gap:13px}
+html[data-density="roomy"]{--fs:17px;--lh:1.68;--row-gap:32px}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:var(--fs)/var(--lh) var(--sans);
+  -webkit-text-size-adjust:100%;overflow-wrap:break-word;overscroll-behavior-y:contain}
+a{color:var(--accent)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+.u{font:500 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.06em}
+
+header{position:sticky;top:0;z-index:10;background:var(--bg);border-bottom:1px solid var(--line);
+  padding:calc(9px + env(safe-area-inset-top,0)) 14px 9px}
+.bar{display:flex;align-items:baseline;gap:9px}
+.brand{font:600 13px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.count{color:var(--accent);font:600 12px/1 var(--mono)}
+.count:empty{display:none}
+.spacer{flex:1}
+.tool{padding:6px 9px;border:1px solid var(--line);border-radius:6px;color:var(--dim);
+  font:600 11px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase}
+#q{width:100%;margin-top:9px;padding:9px 11px;background:var(--surface);color:var(--ink);
+  border:1px solid var(--line);border-radius:7px;font:inherit}
+#q::placeholder{color:var(--faint)}
+.chips{display:flex;gap:6px;margin-top:9px;overflow-x:auto;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{padding:5px 11px;border:1px solid var(--line);border-radius:999px;color:var(--dim);
+  font:500 12px/1.3 var(--mono);white-space:nowrap}
+.chip[aria-pressed="true"]{color:var(--bg);background:var(--accent);border-color:var(--accent)}
+.status{display:flex;align-items:center;gap:10px;margin-top:8px;color:var(--faint)}
+.status button{color:var(--accent)}
+
+main{max-width:720px;margin:0 auto;padding:0 14px calc(56px + env(safe-area-inset-bottom,0))}
+.post{display:grid;grid-template-columns:var(--rail) 1fr;gap:0 12px;
+  padding:var(--row-gap) 0;border-bottom:1px solid var(--line);scroll-margin-top:160px}
+.rail{position:relative;font:500 11px/1.3 var(--mono);color:var(--faint);text-align:right;padding-top:2px}
+.rail b{display:block;font-size:15px;font-weight:600;color:var(--ink);letter-spacing:-.02em}
+.rail::after{content:"";position:absolute;right:-6.5px;top:6px;width:5px;height:5px;
+  border-radius:50%;background:var(--accent)}
+.post.seen .rail::after{background:var(--line)}
+.post.seen .rail b{color:var(--dim);font-weight:500}
+.post.seen h2{font-weight:500;color:var(--dim)}
+h2{margin:0;font:600 calc(var(--fs) * 1.12)/1.28 var(--sans);letter-spacing:-.015em}
+h2 button{text-align:left;display:block;width:100%}
+.cat{display:inline-block;margin-bottom:5px;padding:2px 7px;border:1px solid var(--line);
+  border-radius:4px;color:var(--dim);font:500 10px/1.5 var(--mono);
+  text-transform:uppercase;letter-spacing:.06em}
+.tldr{margin:7px 0 0;color:var(--dim)}
+.meta{display:flex;gap:12px;margin-top:8px;color:var(--faint);align-items:center;flex-wrap:wrap}
+.meta button,.meta a{color:var(--accent);text-decoration:none}
+.body{margin-top:14px;display:none}
+.post.open .body{display:block}
+.body p{margin:0 0 .85em}
+.body h3{margin:1.5em 0 .5em;font:600 calc(var(--fs) * 1.02)/1.3 var(--sans);letter-spacing:.01em}
+.body .end{margin-top:1.3em;padding-top:.9em;border-top:1px solid var(--line);color:var(--faint)}
+
+.gap{display:grid;grid-template-columns:var(--rail) 1fr;gap:0 12px;padding:9px 0;align-items:center}
+.gap span{grid-column:2;display:flex;align-items:center;gap:9px;color:var(--faint);
+  font:500 10.5px/1 var(--mono);text-transform:uppercase;letter-spacing:.07em}
+.gap span::after{content:"";flex:1;height:1px;
+  background:repeating-linear-gradient(90deg,var(--line) 0 4px,transparent 4px 9px)}
+
+.note{padding:26px 2px;color:var(--dim);font-size:14px}
+.note b{color:var(--ink);display:block;margin-bottom:5px;font-weight:600}
+#toast{position:fixed;left:50%;transform:translateX(-50%);z-index:20;
+  bottom:calc(18px + env(safe-area-inset-bottom,0));background:var(--surface);
+  border:1px solid var(--accent);border-radius:8px;padding:10px 14px;display:none;
+  align-items:center;gap:12px;box-shadow:0 6px 24px rgba(0,0,0,.28);max-width:calc(100vw - 28px)}
+#toast.show{display:flex}
+#toast button{color:var(--accent);font:600 12px/1 var(--mono);text-transform:uppercase;letter-spacing:.06em}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bar">
+    <span class="brand">Blog Reader</span>
+    <span class="count" id="unread"></span>
+    <span class="spacer"></span>
+    <button class="tool" id="density">cozy</button>
+    <button class="tool" id="theme">auto</button>
+  </div>
+  <input id="q" type="search" placeholder="Search titles and text" autocomplete="off" aria-label="Search posts">
+  <div class="chips" id="chips" role="group" aria-label="Filters"></div>
+  <div class="status u">
+    <span id="synced">—</span>
+    <button id="refresh" class="u">Refresh</button>
+    <span class="spacer"></span>
+    <button id="markall" class="u">Mark all read</button>
+  </div>
+</header>
+
+<main id="list"><div class="note">Loading posts…</div></main>
+<div id="toast"><span id="toastmsg"></span><button id="toastact">Reload</button></div>
+
+<script>
+"use strict";
+
+const mem = {};
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? (mem[k] ?? d) : v; }
+              catch { return mem[k] ?? d; } },
+  set(k, v) { mem[k] = v; try { localStorage.setItem(k, v); } catch {} }
+};
+
+const DENSITY = ["cozy", "compact", "roomy"];
+const THEMES  = ["auto", "dark", "light"];
+const WINDOWS = [{ l: "30d", d: 30 }, { l: "3mo", d: 92 }, { l: "6mo", d: 183 }, { l: "All", d: 100000 }];
+const THEME_BG = { light: "#F0F1F4", dark: "#0F1218" };
+
+let posts = [], meta = {}, query = "";
+let win = +store.get("win", 183);
+let unreadOnly = store.get("unreadOnly", "0") === "1";
+let category = store.get("cat", "");
+let read = new Set();
+try { read = new Set(JSON.parse(store.get("read", "[]"))); } catch (e) {}
+
+const saveRead = () => store.set("read", JSON.stringify([...read]));
+const unreadCount = () => posts.filter(p => !read.has(p.id)).length;
+
+/* ---- text ------------------------------------------------------------ */
+
+// Inline links were flattened into hard newlines upstream, so rejoin
+// continuation lines and promote standalone short lines to subheadings.
+function reflow(text) {
+  const lines = text.split("\n").map(s => s.replace(/[\u200b-\u200f\u2060\ufeff]/g, "").trim());
+  const out = []; let buf = "";
+  const flush = () => { if (buf) { out.push({ t: "p", s: buf }); buf = ""; } };
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line) { flush(); continue; }
+    let next = "";
+    for (let j = i + 1; j < lines.length; j++) { if (lines[j]) { next = lines[j]; break; } }
+    const heading = line.length < 70 && next.length >= 80
+      && !/[.!?:;,]$/.test(line) && /^[A-Z\u201C"']/.test(next);
+    if (heading) { flush(); out.push({ t: "h", s: line }); continue; }
+    if (!buf) { buf = line; continue; }
+    const closed = /[.!?:;"\u201D\u2019)]$/.test(buf);
+    const cont = /^[a-z0-9,;:.)"'\u2019\u2014-]/.test(line);
+    if (!closed || cont) buf += (/^[,;:.]/.test(line) ? "" : " ") + line;
+    else { flush(); buf = line; }
+  }
+  flush();
+  return out;
+}
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+const mins = w => Math.max(1, Math.ceil(w / 220));
+const day = s => new Date(s + "T00:00:00Z");
+const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function ago(iso) {
+  const secs = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (!isFinite(secs) || secs < 0) return "just now";
+  if (secs < 3600) return Math.max(1, Math.round(secs / 60)) + "m ago";
+  if (secs < 86400) return Math.round(secs / 3600) + "h ago";
+  return Math.round(secs / 86400) + "d ago";
+}
+
+/* ---- render ---------------------------------------------------------- */
+
+function visible() {
+  const cutoff = Date.now() - win * 86400000;
+  const q = query.toLowerCase();
+  return posts.filter(p =>
+    day(p.published_at).getTime() >= cutoff
+    && (!unreadOnly || !read.has(p.id))
+    && (!category || p.category === category)
+    && (!q || p.title.toLowerCase().includes(q)
+           || p.tldr.toLowerCase().includes(q)
+           || p.body_text.toLowerCase().includes(q)));
+}
+
+function updateCounts() {
+  const n = unreadCount();
+  document.getElementById("unread").textContent = n ? n + " unread" : "";
+  document.getElementById("synced").textContent =
+    meta.generated_at ? "synced " + ago(meta.generated_at) : "not synced";
+}
+
+function render() {
+  const list = document.getElementById("list");
+  const shown = visible();
+  updateCounts();
+
+  if (!shown.length) {
+    list.innerHTML = !posts.length
+      ? '<div class="note"><b>No posts yet</b>The sync agent has not written any posts to data/posts.json.</div>'
+      : unreadOnly
+        ? '<div class="note"><b>All caught up</b>Nothing unread in this window. Tap Unread to show everything.</div>'
+        : '<div class="note"><b>Nothing matches</b>Try a shorter search, another category, or a wider window.</div>';
+    return;
+  }
+
+  let html = "";
+  shown.forEach((p, i) => {
+    const d = day(p.published_at), prev = shown[i - 1];
+    if (prev) {
+      const g = Math.round((day(prev.published_at) - d) / 86400000);
+      if (g > 7) html += '<div class="gap"><span>' + g + ' days not captured</span></div>';
+    }
+    const body = reflow(p.body_text)
+      .map(b => b.t === "h" ? "<h3>" + esc(b.s) + "</h3>" : "<p>" + esc(b.s) + "</p>").join("");
+    html += '<article class="post' + (read.has(p.id) ? " seen" : "") + '" id="p-' + esc(p.id) + '">'
+      + '<div class="rail"><b>' + d.getUTCDate() + "</b>" + MON[d.getUTCMonth()] + "</div><div>"
+      + (p.category ? '<span class="cat">' + esc(p.category) + "</span>" : "")
+      + '<h2><button data-toggle="' + esc(p.id) + '" aria-expanded="false">' + esc(p.title) + "</button></h2>"
+      + '<p class="tldr">' + esc(p.tldr) + "</p>"
+      + '<div class="meta u"><span>' + mins(p.word_count) + " min</span>"
+      + "<span>" + p.word_count.toLocaleString() + " words</span>"
+      + '<button data-toggle="' + esc(p.id) + '" data-label>Full text</button>'
+      + '<button data-seen="' + esc(p.id) + '">' + (read.has(p.id) ? "Unread" : "Read") + "</button></div>"
+      + '<div class="body">' + body
+      + '<p class="end u"><a href="' + esc(p.url) + '" target="_blank" rel="noopener">Open original \u2197</a></p>'
+      + "</div></div></article>";
+  });
+  list.innerHTML = html;
+}
+
+function chips() {
+  const cats = [...new Set(posts.map(p => p.category).filter(Boolean))].sort();
+  let h = WINDOWS.map(w =>
+    '<button class="chip" data-days="' + w.d + '" aria-pressed="' + (w.d === win) + '">' + w.l + "</button>").join("");
+  h += '<button class="chip" data-unread="1" aria-pressed="' + unreadOnly + '">Unread</button>';
+  h += cats.map(c =>
+    '<button class="chip" data-cat="' + esc(c) + '" aria-pressed="' + (category === c) + '">' + esc(c) + "</button>").join("");
+  document.getElementById("chips").innerHTML = h;
+}
+
+function prefs() {
+  const den = store.get("density", "cozy"), th = store.get("theme", "auto");
+  document.documentElement.dataset.density = den;
+  if (th === "auto") delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = th;
+  document.getElementById("density").textContent = den;
+  document.getElementById("theme").textContent = th;
+  const dark = th === "dark" || (th === "auto" && matchMedia("(prefers-color-scheme:dark)").matches);
+  document.getElementById("tc").content = dark ? THEME_BG.dark : THEME_BG.light;
+}
+
+let toastTimer;
+function toast(msg, label, fn) {
+  const t = document.getElementById("toast");
+  document.getElementById("toastmsg").textContent = msg;
+  const b = document.getElementById("toastact");
+  b.textContent = label;
+  b.onclick = () => { t.classList.remove("show"); fn(); };
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 12000);
+}
+
+/* ---- events ---------------------------------------------------------- */
+
+function setOpen(art, open) {
+  art.classList.toggle("open", open);
+  art.querySelectorAll("[aria-expanded]").forEach(b => b.setAttribute("aria-expanded", String(open)));
+  const lbl = art.querySelector("[data-label]");
+  if (lbl) lbl.textContent = open ? "Hide text" : "Full text";
+}
+
+document.addEventListener("click", e => {
+  const tog = e.target.closest("[data-toggle]");
+  if (tog) {
+    const id = tog.dataset.toggle, art = document.getElementById("p-" + id);
+    const open = !art.classList.contains("open");
+    setOpen(art, open);
+    if (open && !read.has(id)) {           // opening a post is what marks it read
+      read.add(id); saveRead();
+      art.classList.add("seen");
+      const sb = art.querySelector("[data-seen]");
+      if (sb) sb.textContent = "Unread";
+      updateCounts();
+    }
+    return;
+  }
+  const seen = e.target.closest("[data-seen]");
+  if (seen) {
+    const id = seen.dataset.seen;
+    read.has(id) ? read.delete(id) : read.add(id);
+    saveRead(); render(); return;
+  }
+  const chip = e.target.closest(".chip");
+  if (chip) {
+    if (chip.dataset.days) { win = +chip.dataset.days; store.set("win", win); }
+    else if (chip.dataset.unread) { unreadOnly = !unreadOnly; store.set("unreadOnly", unreadOnly ? "1" : "0"); }
+    else if (chip.dataset.cat) {
+      category = category === chip.dataset.cat ? "" : chip.dataset.cat;
+      store.set("cat", category);
+    }
+    chips(); render(); return;
+  }
+  const id = e.target.id;
+  if (id === "density") {
+    store.set("density", DENSITY[(DENSITY.indexOf(store.get("density", "cozy")) + 1) % 3]); prefs();
+  } else if (id === "theme") {
+    store.set("theme", THEMES[(THEMES.indexOf(store.get("theme", "auto")) + 1) % 3]); prefs();
+  } else if (id === "refresh") {
+    load(true);
+  } else if (id === "markall") {
+    visible().forEach(p => read.add(p.id)); saveRead(); render();
+  }
+});
+
+let qt;
+document.getElementById("q").addEventListener("input", e => {
+  clearTimeout(qt);
+  qt = setTimeout(() => { query = e.target.value.trim(); render(); }, 140);
+});
+
+let st;
+addEventListener("scroll", () => {
+  clearTimeout(st);
+  st = setTimeout(() => { try { sessionStorage.setItem("scroll", String(scrollY)); } catch (e) {} }, 200);
+}, { passive: true });
+
+/* ---- load ------------------------------------------------------------ */
+
+function openHash() {
+  const m = location.hash.match(/^#p-(.+)$/);
+  if (!m) return false;
+  const art = document.getElementById("p-" + m[1]);
+  if (!art) return false;
+  setOpen(art, true);
+  art.scrollIntoView();
+  return true;
+}
+
+function load(manual) {
+  return fetch("../data/posts.json", { cache: manual ? "reload" : "no-cache" })
+    .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(d => {
+      const before = posts.length ? new Set(posts.map(p => p.id)) : null;
+      posts = d.posts || [];
+      meta = { generated_at: d.generated_at, window_days: d.window_days };
+      chips(); render();
+      if (!openHash() && !manual) {
+        let y = 0;
+        try { y = +sessionStorage.getItem("scroll") || 0; } catch (e) {}
+        if (y) scrollTo(0, y);
+      }
+      if (manual) {
+        const fresh = before ? posts.filter(p => !before.has(p.id)).length : posts.length;
+        toast(fresh ? fresh + " new post" + (fresh > 1 ? "s" : "") : "Already up to date", "OK", () => {});
+      }
+    })
+    .catch(err => {
+      if (posts.length) { toast("Refresh failed \u2014 showing cached posts", "OK", () => {}); return; }
+      document.getElementById("list").innerHTML =
+        '<div class="note"><b>Could not load posts</b>' + esc(err.message)
+        + ". The reader expects data/posts.json one level above this page.</div>";
+    });
+}
+
+prefs();
+load(false);
+addEventListener("hashchange", openHash);
+
+if ("serviceWorker" in navigator) {
+  addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").then(reg => {
+      reg.addEventListener("updatefound", () => {
+        const w = reg.installing;
+        if (!w) return;
+        w.addEventListener("statechange", () => {
+          if (w.state === "installed" && navigator.serviceWorker.controller)
+            toast("A new version of the reader is ready", "Reload", () => location.reload());
+        });
+      });
+    }).catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
