@@ -1,10 +1,10 @@
 {
-  "ran_at": "2026-08-05T06:10:53Z",
+  "ran_at": "2026-08-06T06:13:09Z",
   "source_url": "https://claude.com/blog",
   "window_days": 180,
   "counts": { "discovered": 15, "new": 1, "changed": 0, "unchanged": 14, "pruned": 0, "skipped": 0 },
   "skipped": [],
   "notes": [
-    "Discovery set is the 15 posts on the primary index card grid (fs-list). A separate marquee widget on the same page repeats 10 older posts already in data/posts.json with no category field attached; those are not treated as index cards per the runbook and were not re-diffed. The 11 stored posts not shown in either section today (e.g. working-with-claude-fable-5-in-claude-cowork) are carried forward unchanged; none aged past cutoff (2026-02-06)."
+    "Discovery set is the 15 posts on the primary index card grid (fs-list); the marquee widget repeats older posts already in data/posts.json with no category field and was not re-diffed, per prior-run precedent. No stored post aged past cutoff (2026-02-07)."
   ]
 }

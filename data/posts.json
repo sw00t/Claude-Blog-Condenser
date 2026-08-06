@@ -1,9 +1,31 @@
 {
   "version": 1,
-  "generated_at": "2026-08-05T06:11:23Z",
+  "generated_at": "2026-08-06T06:12:23Z",
   "window_days": 180,
   "source_url": "https://claude.com/blog",
   "posts": [
+    {
+      "id": "claude-enterprise-inference-hooks",
+      "url": "https://claude.com/blog/claude-enterprise-inference-hooks",
+      "title": "Inference hooks: inline data loss prevention for Claude Enterprise",
+      "published_at": "2026-08-05",
+      "category": "Enterprise AI",
+      "tldr": "Anthropic is launching inference hooks, letting security teams inspect and block or approve every Claude Enterprise prompt and tool response before it reaches Claude. Requests route through a signed WebSocket to the team's own DLP server, covering chat, Claude Code, and Cowork. It uses an open webhook protocol compatible with vendors like Netskope and Zscaler, with shadow-mode rollout options.",
+      "body_text": "[[figure:1]]\n\nInference hooks lets your compliance team inspect and enforce policy on every prompt and tool call response before they reach Claude — across Claude Enterprise surfaces including chat, Claude Code, Claude Cowork, and more. Your DLP server makes the call to block or allow, and Claude enforces that decision in real time, blocking unapproved content before it reaches Claude.\n\nSecurity teams require every channel where employees can move sensitive data to pass through an inspection point their team controls. Until today, native inline enforcement was limited to Claude Code's client-side hooks. Inference hooks closes the gap with a single enforcement layer that covers every Claude Enterprise surface without separate integration work or agent per product.\n\nHow inference hooks works\n\n[[figure:2]]\n\nWhen an organization turns on inference hooks, every inference request routes through a signed WebSocket connection to a security server. Before the model starts generating, Claude sends the prompt and its surrounding context to your server. Your server returns a verdict — allow or deny — and Claude only proceeds once it has one. The same check runs on tool calls: when Claude calls a tool — including tools connected through MCP, skills, and plugins — the tool's response is checked before it's sent back to the model.\n\nWays to use inference hooks\n\nExtend your existing DLP program to Claude. Inference hooks uses an open, webhook-based protocol with a published schema. That makes deployment easy — just point it at the same server your other tools already report to including Netskope, Palo Alto Networks, Proofpoint, Zscaler or an AI security server you built in-house.\n\nCover chat, Claude Code, Cowork, and additional Claude Enterprise products with one configuration. Turn on inference hooks once at the organization level and it applies to Claude Enterprise surfaces, including tool calls made through MCP connectors, skills, and plugins.\n\nSimplify rollout with shadow mode (always allow), role-based exclusions, and percentage-based rollouts. Customize failure-policy tolerance, timeouts, and other settings to match your organization's risk tolerance.\n\nGetting started\n\nInference hooks is available today in beta for Claude Enterprise customers. Read the documentation to configure your organization's DLP server and start enforcing policy across Claude Enterprise surfaces.\n\nFor security vendors, inference hooks is built on a webhook-based protocol with a documented schema, so you can build an integration, and Claude Enterprise customers can point their organization at your platform.",
+      "word_count": 391,
+      "figures": [
+        {
+          "n": 1,
+          "src": "https://cdn.prod.website-files.com/68a44d4040f98a4adf2207b6/6a737642f52b1b4fc4aaec1a_260805-PromptHooks-Blog-960x540-ZT-v008.gif"
+        },
+        {
+          "n": 2,
+          "src": "https://cdn.prod.website-files.com/68a44d4040f98a4adf2207b6/6a7362314ccf1158f2bffe5f_Claude-blog-prompt-hooks-DLP%20(1).png"
+        }
+      ],
+      "fetched_at": "2026-08-06T06:12:14Z",
+      "content_hash": "7fb338b1d5594f590ba9d04d32804461129d78a7ef4ed95012533ad8e88ebe1a"
+    },
     {
       "id": "a-guide-to-cost-visibility-and-control-in-claude",
       "url": "https://claude.com/blog/a-guide-to-cost-visibility-and-control-in-claude",
