@@ -1,10 +1,10 @@
 {
-  "ran_at": "2026-08-06T06:13:09Z",
+  "ran_at": "2026-08-07T06:07:50Z",
   "source_url": "https://claude.com/blog",
   "window_days": 180,
-  "counts": { "discovered": 15, "new": 1, "changed": 0, "unchanged": 14, "pruned": 0, "skipped": 0 },
+  "counts": { "discovered": 15, "new": 2, "changed": 0, "unchanged": 13, "pruned": 0, "skipped": 0 },
   "skipped": [],
   "notes": [
-    "Discovery set is the 15 posts on the primary index card grid (fs-list); the marquee widget repeats older posts already in data/posts.json with no category field and was not re-diffed, per prior-run precedent. No stored post aged past cutoff (2026-02-07)."
+    "Discovery set is the 15 posts on the primary index card grid (fs-list-field cards). No stored post aged past cutoff (2026-02-08). All 13 overlapping posts matched stored title/date and were carried forward unchanged."
   ]
 }
