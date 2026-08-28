@@ -1,12 +1,10 @@
 {
-  "ran_at": "2026-08-27T18:55:25Z",
+  "ran_at": "2026-08-28T06:05:00Z",
   "source_url": "https://claude.com/blog",
   "window_days": 180,
-  "counts": { "discovered": 15, "new": 6, "changed": 0, "unchanged": 29, "pruned": 0, "skipped": 0 },
+  "counts": { "discovered": 15, "new": 6, "changed": 0, "unchanged": 6, "pruned": 0, "skipped": 0 },
   "skipped": [],
   "notes": [
-    "Discovery set is the 15 posts on the primary index card grid. All 15 were new (no id overlap with stored posts). Fetched the 6 most recently published per max_new_fetches_per_run: how-warp-builds-self-improving-agents-on-claude, claude-in-chrome-generally-available, cowork-built-in-browser, bain-company-joins-the-claude-partner-network-as-a-global-premier-partner, claudes-memory-works-everywhere-and-you-decide-whats-in-it, how-an-anthropic-field-marketer-uses-claude-code-to-send-weekly-personalized-updates-to-every-sales-rep.",
-    "9 discovered posts remain unfetched for a future run: bringing-claude-mythos-5-to-more-defenders (2026-08-21), the-ai-native-sdlc-playbook (2026-08-21), anthropics-approach-to-teaching-and-learning-ai (2026-08-20), how-monday-com-transformed-its-platform-into-an-agent-first-product-where-humans-and-agents-collaborate (2026-08-20), claude-code-guide-for-startups (2026-08-20), computer-use-skills-api-files-api (2026-08-20), turning-conversation-into-knowledge-how-slack-builds-human-agent-teams (2026-08-19), ai-ci-cd-on-call (2026-08-18), how-abc-legal-turned-every-employee-into-a-builder-with-claude-managed-agents (2026-08-17).",
-    "No stored TL;DRs required repair (all within word bounds). No posts aged past cutoff (2026-02-28)."
+    "3 new posts discovered on page 1 exceeded max_new_fetches_per_run (6) and were not fetched this run: turning-conversation-into-knowledge-how-slack-builds-human-agent-teams (2026-08-19), ai-ci-cd-on-call (2026-08-18), how-abc-legal-turned-every-employee-into-a-builder-with-claude-managed-agents (2026-08-17). They remain visible on page 1 and will be picked up next run."
   ]
 }
