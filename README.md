@@ -1,7 +1,7 @@
 # Claude Blog Condenser
 
 A daily agent mirrors the [claude.com/blog](https://claude.com/blog) front page into a
-JSON file, writes a 25–60 word summary for each new post, and commits the result. A
+JSON file, writes a 25 to 60 word summary for each new post, and commits the result. A
 static PWA renders that file as dense, text-first reading that works offline. There is
 no backend, no database, and no server: **the git repo is the state store**, and GitHub
 Pages serves both the data and the reader from the same commit.
@@ -12,7 +12,7 @@ Pages serves both the data and the reader from the same commit.
 
 ## Why this exists
 
-I wanted to read the Claude blog the way I actually read — quickly, offline, on a phone,
+I wanted to read the Claude blog the way I actually read: quickly, offline, on a phone,
 without a 500 KB page of chrome around each article. That is a small problem. The
 interesting problem was the one behind it: **how much of a recurring job should an LLM
 actually be doing?**
@@ -20,7 +20,7 @@ actually be doing?**
 The first version answered "most of it." An agent read a runbook and did the whole job:
 fetch, extract, diff, summarize, validate, commit. It worked for a month, then failed in
 a way that was expensive and instructive. The current version answers "as little as
-possible" — one API call per new post, and nothing else.
+possible": one API call per new post, and nothing else.
 
 That rewrite is the substance of this repo. The incident that motivated it is documented
 below rather than quietly fixed, because the failure is more interesting than the code.
@@ -38,8 +38,8 @@ below rather than quietly fixed, because the failure is more interesting than th
            ── judgment ──▶   ── deterministic ──────────────────────────────────▶
 ```
 
-The split is the whole design. Everything that is deterministic — fetching, stripping
-HTML, diffing, validating, writing, committing — is code in `sync.py`. The only step
+The split is the whole design. Everything that is deterministic (fetching, stripping
+HTML, diffing, validating, writing, committing) is code in `sync.py`. The only step
 that genuinely needs a model is writing prose, and that is one bounded, validated call.
 
 The agent's entire job is:
@@ -52,7 +52,7 @@ cd /workspace/reader && python3 sync.py
 (`agent/task-prompt.md`) is 87 lines, most of which is a list of things it must *not*
 improvise. It has no judgment left to exercise, which is the point.
 
-`sync.py` is ~1,190 lines of **dependency-free Python 3.9** — `urllib`, `html.parser`,
+`sync.py` is ~1,190 lines of **dependency-free Python 3.9**: `urllib`, `html.parser`,
 `hashlib`, `subprocess`, and a small JSON Schema validator written against the subset
 the contract actually uses. No `requests`, no `bs4`, no `jsonschema`, no SDK. A cloud
 sandbox with a bare interpreter can run it.
@@ -64,9 +64,9 @@ sandbox with a bare interpreter can run it.
 | Wall clock | 8 min, checked between stages | Commit what finished, write `last_sync.json`, exit 0 |
 | HTTP fetches | 8 per run, including the index | Stop fetching, note the shortfall, continue |
 | New posts summarized | 6 per run | Remainder deferred to the next run |
-| Attempts per operation | 2 | Abort the whole run — never a third try |
+| Attempts per operation | 2 | Abort the whole run, never a third try |
 | API calls per post | 1, at most 2 | Skip that post, record it in `skipped` |
-| Commits per run | Exactly 1 | — |
+| Commits per run | Exactly 1 | n/a |
 
 None of these is a retry loop. Each one exits cleanly. This matters because the previous
 version expressed the same budgets as prose in a prompt, where they were advisory.
@@ -79,14 +79,14 @@ position. There is no code path that writes a partial file, splits a payload, or
 a placeholder. If the whole file cannot be written, the previous file is left untouched
 and the run exits non-zero having committed nothing.
 
-Commits go through **local `git` in the mounted repo** — never the GitHub file API.
+Commits go through **local `git` in the mounted repo**, never the GitHub file API.
 
 ---
 
 ## The incident that shaped it
 
 On **2026-09-07**, the scheduled run made **14 commits between 07:14 and 07:41**, drained
-the API balance, and left `data/posts.json` truncated at 51,517 bytes — ending mid-array
+the API balance, and left `data/posts.json` truncated at 51,517 bytes, ending mid-array
 on a trailing comma, with double-escaped newlines. It did not parse. The live reader
 broke.
 
@@ -104,12 +104,12 @@ The commit log is the clearest account of what happened:
 ```
 
 The agent could not write `posts.json` in one call, so it started reverse-engineering the
-GitHub file-write API — splitting the payload into parts, committing placeholders to test
+GitHub file-write API: splitting the payload into parts, committing placeholders to test
 whether `push_files` needed a `sha`, cleaning up after itself, trying again. It behaved
 reasonably at every individual step. The aggregate was a corrupted dataset and a spent
 balance.
 
-**Recovery** was one command — the last good state was 44 posts at `b192338`:
+**Recovery** was one command. The last good state was 44 posts at `b192338`:
 
 ```sh
 git checkout b192338 -- data/posts.json
@@ -136,7 +136,7 @@ mounted repo, which does not care about file size.*
 
 A fourth lesson, softer: **the model that fails is not always the model to blame.** Haiku
 had been tried for this job in August and produced mechanical, sliced summaries. The
-conclusion at the time was "Haiku can't do this." The real cause was structural — it was
+conclusion at the time was "Haiku can't do this." The real cause was structural. It was
 doing extraction, diffing, summarizing *and* committing, under an explicit
 cost-discipline instruction, with `bash` available. It found a cheap deterministic path
 and took it. Given one narrow job, no tools, and a validated output, Haiku 4.5 writes
@@ -148,14 +148,15 @@ these summaries well. It runs both roles today.
 
 **Scope is page 1 of the blog index. Deliberately.** No pagination, no feeds, no
 sitemaps, no category archives. The site randomizes its pagination query-param prefix per
-render, so constructed page URLs silently return page 1 again — guessing costs a fetch
+render, so constructed page URLs silently return page 1 again, so guessing costs a fetch
 and yields nothing. Coverage accumulates instead: posts that scroll off page 1 are
 carried forward from storage until they age out. **Date is the only prune criterion;
 absence from page 1 never removes a post.**
 
 **The runbook lives in the repo, not the system prompt.** The deployment's initial
 message is a one-line pointer to `agent/task-prompt.md` in the mounted checkout, so
-changing the procedure is a plain commit — no `agents update`, no re-pin, no redeploy.
+changing the procedure is a plain commit, with no `agents update`, no re-pin,
+and no redeploy.
 
 **The summary prompt is given stricter limits than the validator enforces.** Models drift
 long, and a summary aimed at the exact ceiling lands just over it about half the time
@@ -178,12 +179,12 @@ arithmetic recorded next to the flag and per-run usage logged so the decision st
 observable rather than assumed.
 
 **Models.** Haiku 4.5 for both roles. Note that Haiku 4.5 does not support the `effort`
-parameter at all — it errors — so "run the cheap model at low effort" is not available
+parameter at all (it errors), so "run the cheap model at low effort" is not available
 here; dropping the reasoning model *is* the saving. Changing `SUMMARY_MODEL` in `sync.py`
 is a one-line experiment with no effect on the runner.
 
 **Credentials degrade gracefully.** `sync.py` resolves `ANTHROPIC_API_KEY`, then
-`ANTHROPIC_AUTH_TOKEN`, then the `ant` CLI's stored OAuth profile — which it refreshes
+`ANTHROPIC_AUTH_TOKEN`, then the `ant` CLI's stored OAuth profile, which it refreshes
 itself, so a local run or a local schedule needs no API key at all. A cloud sandbox
 cannot use the profile (`ant auth login` is interactive), so a scheduled run needs a key
 supplied through the vault. With no credential the script aborts cleanly and commits
@@ -220,7 +221,7 @@ the source CDN, never re-hosted; the reader drops any figure whose image fails t
 
 Extraction targets the article container and drops the page's metadata block and trailing
 chrome. A self-check rejects any body where a chrome label (`Category`, `Reading time`,
-`Copy link`, …) survives **as a standalone line** — matched per-line rather than as a
+`Copy link`, …) survives **as a standalone line**, matched per-line rather than as a
 substring, because "Category Management" is legitimate prose and a substring match
 silently discarded a real post.
 
@@ -260,13 +261,13 @@ ant auth login          # or: export ANTHROPIC_API_KEY=sk-ant-...
 python3 sync.py
 ```
 
-That is the entire local setup — it will fetch, summarize, validate, commit, and push.
+That is the entire local setup. It will fetch, summarize, validate, commit, and push.
 
 <details>
 <summary><b>Cloud scheduling via Managed Agents</b> (optional)</summary>
 
 1. **GitHub token.** Fine-grained PAT scoped to this repo, **Contents read/write** +
-   **Issues read/write**. Copy `.env.example` to `.env` and put it there — `.env` is
+   **Issues read/write**. Copy `.env.example` to `.env` and put it there. `.env` is
    gitignored and `agent/setup.sh` reads it. Never put it in `setup.sh`; this repo is
    public.
 
@@ -278,7 +279,7 @@ That is the entire local setup — it will fetch, summarize, validate, commit, a
 
 3. **Vault for the GitHub MCP credential** (once). The repo resource's
    `authorization_token` authenticates git clone/push through the Anthropic git proxy
-   only — it does **not** authenticate the MCP server, and the failure protocol needs MCP
+   only. It does **not** authenticate the MCP server, and the failure protocol needs MCP
    to file issues:
    ```sh
    ant beta:vaults create --display-name "blog-reader-github"
@@ -343,7 +344,7 @@ ant beta:deployments update --deployment-id $DEPLOYMENT_ID \
 ```
 
 > **Deployments pin a concrete agent version and do not follow `latest`.** A bare agent
-> ID passed to `deployments create` resolves *once*, at creation, and freezes — unlike
+> ID passed to `deployments create` resolves *once*, at creation, and freezes, unlike
 > `sessions.create`, where a bare ID means "latest at session start". Skip the re-pin and
 > every `agents update` is silently ignored by the schedule, with no error anywhere.
 > Confirm with
@@ -360,21 +361,21 @@ ant beta:deployments update --deployment-id $DEPLOYMENT_ID \
 - **MCP tools must be `always_allow` for unattended runs.** An `mcp_toolset` left at its
   default evaluates to `ask`: the session goes idle with `stop_reason: requires_action`
   waiting for a confirmation nobody sends. The built-in `agent_toolset` is unaffected, so
-  the symptom only appears on the failure path — the path you least want to find broken.
+  the symptom only appears on the failure path, the path you least want to find broken.
   `setup.sh` sets the policy explicitly.
 - **Changing the extraction rules does not re-extract stored posts.** The diff re-fetches
   only on a title or date change, so existing records keep whatever `body_text` they were
   captured with. After editing extraction in `sync.py`, delete `data/posts.json` and let
   successive runs rebuild it 6 posts at a time. There is deliberately no
-  `extraction_version` auto-invalidation — machinery for something that changes rarely —
-  but you must remember the reset.
+  `extraction_version` auto-invalidation, which would be machinery for something
+  that changes rarely, but you must remember the reset.
 - **Read state is per-device**, in `localStorage` keyed on post `id`. Deleting
   `data/posts.json` does not lose it, because ids are stable slugs. No cross-device sync,
   and none planned.
 - **Summaries mode changes what the first tap does.** With Summaries on, posts render
   already open, so the first tap on a title closes rather than opens it and does not mark
-  the post read; tapping Full text still does. The alternative — marking every visible
-  post read the instant the toggle flips — is worse. Documented, not fixed.
+  the post read; tapping Full text still does. The alternative, marking every visible
+  post read the instant the toggle flips, is worse. Documented, not fixed.
 - **Cost is read from the Console Cost page**, because the Usage and Cost Admin API needs
   an Admin API key that individual accounts cannot provision. Note that a *rate* limit
   (tokens/min) is not a *spend* limit: it caps throughput, not total cost. At 250k
@@ -393,7 +394,7 @@ ant beta:deployments update --deployment-id $DEPLOYMENT_ID \
 
 - **Pagination, feeds, sitemaps, category archives.** Cost control. Coverage accumulates.
 - **Splitting `posts.json` into an index plus per-post bodies.** It would help PWA load
-  time as the file grows, and it was the *trigger* for the payload limit — but local git
+  time as the file grows, and it was the *trigger* for the payload limit, but local git
   handles a file this size without difficulty, and the script never loads it into a model
   context. Solving it now would be solving the symptom of a bug that no longer exists.
 - **Retry logic beyond two attempts.** Every loop in this system was once a good idea.

@@ -30,11 +30,11 @@ Report exactly these four things, then end the turn:
 
 Exit codes:
 
-- `0` — success. This includes a quiet day with no new posts and no commit, and
+- `0`: success. This includes a quiet day with no new posts and no commit, and
   a run that stopped early on its time budget and committed what it finished.
   Both are normal, as are `skipped` entries in `last_sync.json`.
-- `1` — the run aborted and wrote nothing. `data/posts.json` is untouched.
-- `2` — push authentication failed. The commit exists locally but is unpushed.
+- `1`: the run aborted and wrote nothing. `data/posts.json` is untouched.
+- `2`: push authentication failed. The commit exists locally but is unpushed.
 
 ## Do not improvise
 
@@ -44,11 +44,11 @@ approach, and made 14 commits that left the file corrupt. Everything in this
 section exists because of that run.
 
 - **Do not retry beyond what the script does.** It already retries exactly as
-  much as it should. If it exits non-zero, that is the answer — do not run it
+  much as it should. If it exits non-zero, that is the answer. Do not run it
   again.
 - **Do not edit any file by hand.** Not `data/posts.json`, not
   `data/last_sync.json`, not `config.json`, not the script.
-- **Do not use the GitHub file APIs** — not `create_or_update_file`, not
+- **Do not use the GitHub file APIs.** Not `create_or_update_file`, not
   `push_files`, not any MCP file write. The script commits through local `git`
   in this mounted repo. The GitHub MCP server is for filing issues, nothing else.
 - **Do not attempt any alternative write path.** No writing the file in parts,
@@ -70,7 +70,7 @@ A non-zero exit is the only thing that triggers this protocol.
 
 1. Commit nothing. Change nothing.
 2. File a GitHub issue on `sw00t/Claude-Blog-Condenser` using the **GitHub MCP
-   server** — not `git`, and not the `bash` tool. MCP is authenticated by the
+   server**, not `git`, and not the `bash` tool. MCP is authenticated by the
    vault credential attached to this deployment; the repo's own token only
    covers clone and push.
    - Title: `crawler failure: YYYY-MM-DD`
@@ -79,9 +79,9 @@ A non-zero exit is the only thing that triggers this protocol.
      session's ID.
 3. Before filing, list open issues and check for an existing open issue with the
    same title prefix. If one exists, add a comment instead of opening a
-   duplicate — this runs daily and a persistent breakage must not produce a new
+   duplicate. This runs daily and a persistent breakage must not produce a new
    issue every morning.
 4. End the turn reporting the failure and the issue number.
 
 A clean run with skipped posts, a shortfall note, or no changes at all is a
-success — report it and end the turn.
+success. Report it and end the turn.

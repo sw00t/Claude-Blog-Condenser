@@ -1,4 +1,4 @@
-# Secrets — never commit. agent/setup.sh sources this for GITHUB_TOKEN.
+# Secrets. Never commit. agent/setup.sh sources this for GITHUB_TOKEN.
 .env
 .env.*
 !.env.example
