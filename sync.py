@@ -41,7 +41,14 @@ HTTP_TIMEOUT_S = 45
 # not care which model this is, and no other stage calls the API.
 SUMMARY_MODEL = "claude-haiku-4-5"
 SUMMARY_MAX_TOKENS = 300
-SUMMARY_INPUT_CHAR_CAP = 24000  # bounds worst-case input cost on a long post
+# Bounds the body text sent per summary, and with it the worst case for a whole
+# run. Measured over the stored set: median post 6.6k chars, p75 10.3k, p90 21k,
+# longest 69k. At 16k the full 6-post cap is ~24k input tokens, which keeps a run
+# inside the ~30k/run budget and under a 20k/min workspace ITPM ceiling; ~87% of
+# posts still go to the model whole. Truncation only ever drops the tail of a very
+# long post, and a summary leads with what the post announces, which is at the
+# front. Raise this if summaries of long posts start missing the point.
+SUMMARY_INPUT_CHAR_CAP = 16000
 TLDR_MAX_CHARS = 600            # posts.schema.json tldr maxLength
 # The prompt is given stricter limits than the validator enforces. Models drift
 # long on long posts, and a summary aimed at the exact ceiling lands just over it
