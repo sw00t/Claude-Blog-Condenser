@@ -1,13 +1,13 @@
 {
-  "ran_at": "2026-09-07T16:29:45Z",
+  "ran_at": "2026-09-07T16:38:27Z",
   "source_url": "https://claude.com/blog",
-  "window_days": 180,
+  "window_days": 35,
   "counts": {
     "discovered": 23,
-    "new": 1,
+    "new": 0,
     "changed": 0,
-    "unchanged": 45,
-    "pruned": 0,
+    "unchanged": 21,
+    "pruned": 25,
     "skipped": 0
   },
   "skipped": [],
