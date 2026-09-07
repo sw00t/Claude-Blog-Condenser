@@ -1,7 +1,8 @@
 # Claude-Blog-Condenser
 
-A Claude Managed Agent syncs the first page of [claude.com/blog](https://claude.com/blog)
-into `data/posts.json` on a daily schedule and commits the result to this repo. A static
+A scheduled Claude Managed Agent runs `sync.py`, which syncs the first page of
+[claude.com/blog](https://claude.com/blog) into `data/posts.json` and commits the result
+to this repo. The script does the work; the agent only launches it and reports. A static
 PWA in `app/` reads that file and renders it as dense, text-first reading. GitHub Pages
 serves both from the same repo. There is no backend and no database — the git repo *is*
 the state store.
@@ -13,16 +14,17 @@ Live at **https://sw00t.github.io/Claude-Blog-Condenser/**
 ```
 Claude-Blog-Condenser/
 ├── README.md                # this file — the only prose document in the repo
-├── config.json              # runtime config the agent reads each run
+├── sync.py                  # the sync itself: fetch, diff, summarize, validate, commit
+├── config.json              # runtime config sync.py reads each run
 ├── .env.example             # template for .env (gitignored; agent/setup.sh reads it)
 ├── index.html               # redirects to app/ so the bare Pages URL opens the reader
 ├── agent/
-│   ├── system-prompt.md     # agent persona (set once, at agent creation)
-│   ├── task-prompt.md       # per-run runbook (versioned here, read by the agent)
+│   ├── system-prompt.md     # runner persona (set once, at agent creation)
+│   ├── task-prompt.md       # per-run runbook: run sync.py, report the outcome
 │   └── setup.sh             # one-time: create the agent + scheduled deployment
 ├── data/
-│   ├── posts.json           # generated content (agent-owned, never hand-edit)
-│   ├── posts.schema.json    # data contract; the agent validates before committing
+│   ├── posts.json           # generated content (script-owned, never hand-edit)
+│   ├── posts.schema.json    # data contract; sync.py validates against it before writing
 │   └── last_sync.json       # generated run metadata
 └── app/                     # the PWA
     ├── index.html           # whole reader: markup, styles, logic
@@ -33,18 +35,36 @@ Claude-Blog-Condenser/
 
 ## How it works
 
+- **The work is a script, not a reasoning loop.** Fetch, strip, diff, write, and commit
+  are deterministic, so they live in `sync.py` where the limits are *enforced* rather
+  than advised. The agent's whole job is `python3 sync.py` plus reporting the exit code.
+  Only summarization needs a model, and that is one API call per new post with a
+  validated result.
+- **Every budget is code.** One run is capped at 8 minutes wall clock, 8 HTTP fetches,
+  6 new posts, 2 attempts per operation, and exactly one commit. Each cap causes a clean
+  exit, never a retry loop. Prose budgets in a prompt are advisory; a confused model
+  walks through them, which is what happened on 2026-09-07.
 - **The runbook lives in the repo, not the system prompt.** The deployment's initial
   message is a one-line pointer to `agent/task-prompt.md` in the mounted repo, so
   changing what the agent does each run is a plain commit — no `agents update`, no
   re-pin, no redeploy. Every run reads the latest committed version.
-- **The repo doubles as the state store.** The agent diffs discovered posts against
+- **The repo doubles as the state store.** `sync.py` diffs discovered posts against
   `data/posts.json`, fetches only new or changed posts, and prunes records that age out
-  of `window_days`.
-- **The agent never commits invalid data.** `data/posts.json` must validate against
-  `data/posts.schema.json` before it is written. On a parse, fetch, or validation
-  failure the agent commits nothing and files a GitHub issue instead (see the failure
-  protocol in `agent/task-prompt.md`). A run that writes nothing is a good outcome; a
-  run that commits malformed data is not.
+  of `window_days`. Date is the only prune criterion; absence from page 1 never is.
+- **Writes are all-or-nothing.** The complete `posts.json` is built in memory, validated
+  against `data/posts.schema.json`, written to a temp file, and `os.replace()`d into
+  place. There is no code path that writes a partial file or splits a payload into
+  parts, and commits go through local `git` in the mounted repo — never the GitHub file
+  API, which is what hit a payload limit at ~44 posts.
+- **Nothing invalid is ever committed.** On a parse, fetch, or validation failure the
+  script writes nothing, leaves the previous `posts.json` untouched, and exits non-zero;
+  the agent then files a GitHub issue (see the failure protocol in
+  `agent/task-prompt.md`). A run that writes nothing is a good outcome; a run that
+  commits malformed data is not.
+- **Models.** The runner is Haiku 4.5 at the lowest available effort — it starts a
+  subprocess and reads an exit code. Summarization inside `sync.py` is also Haiku 4.5,
+  given one narrow job, no tools, and a validated output. Changing `SUMMARY_MODEL` in
+  `sync.py` is a one-line experiment with no effect on the runner.
 
 ## First-time setup
 

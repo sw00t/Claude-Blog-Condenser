@@ -23,6 +23,12 @@ set -euo pipefail
 # shellcheck source=/dev/null
 [ -f ../.env ] && . ../.env
 : "${GITHUB_TOKEN:?set GITHUB_TOKEN in ../.env or the environment}"
+
+# sync.py calls the Messages API to write TL;DRs, so the SESSION SANDBOX needs an
+# ANTHROPIC_API_KEY of its own - the agent's own inference credential is not
+# exposed to the `bash` tool. Wire it through the vault/environment config below
+# and confirm it is visible in the sandbox before relying on a scheduled run;
+# without it sync.py aborts cleanly (exit 1) whenever there are new posts.
 case "$GITHUB_TOKEN" in
   ghp_xxx|*REPLACE_ME*)
     echo "error: GITHUB_TOKEN is still the .env.example placeholder." >&2
@@ -36,7 +42,10 @@ ENVIRONMENT_ID="REPLACE_ME"        # env_... from `ant beta:environments create`
 VAULT_ID="REPLACE_ME"              # vlt_... containing the GitHub MCP credential (README step 5)
 TIMEZONE="Etc/UTC"                 # IANA tz; avoid 1-3 AM local if you change it (DST)
 CRON="0 6 * * *"                   # daily 06:00 in $TIMEZONE
-MODEL="claude-sonnet-5"            # Haiku extracts cleanly but writes mechanical TL;DRs and misses coverage gaps
+MODEL="claude-haiku-4-5-20251001"  # The agent only runs sync.py and reports its exit code.
+                                   # There is no judgment left in the loop, so Sonnet reasoning
+                                   # buys nothing here. Summarization happens inside sync.py and
+                                   # picks its own model (SUMMARY_MODEL) independently of this.
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Fail fast on unfilled placeholders rather than creating a half-wired deployment.
