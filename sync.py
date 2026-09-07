@@ -1003,8 +1003,22 @@ def run(argv):
     log("stage 2: discovered %d posts on page 1" % len(discovered))
 
     # Stage 3: diff.
+    # Drop anything already outside the retention window before diffing. Page 1
+    # routinely carries posts older than a short window_days, and those were just
+    # pruned from storage - without this they look "new" every run, get fetched
+    # and summarized, and then fail the cutoff check, aborting the run and burning
+    # the API budget daily. A post out of window is never worth fetching: it would
+    # be pruned again the moment it was added.
+    aged_out = [i for i in discovered
+                if i["index_date"] and i["index_date"] < cutoff]
+    if aged_out:
+        log("stage 3: %d discovered post(s) are older than the cutoff; ignoring"
+            % len(aged_out))
+    candidates = [i for i in discovered
+                  if not (i["index_date"] and i["index_date"] < cutoff)]
+
     new_ids, changed_ids = [], []
-    for item in discovered:
+    for item in candidates:
         prior = stored.get(item["id"])
         if prior is None:
             new_ids.append(item)
@@ -1046,6 +1060,10 @@ def run(argv):
         except SkipPost as exc:
             log("  skipped: %s" % exc)
             skipped.append({"id": item["id"], "reason": str(exc)})
+            continue
+
+        if record["published_at"] < cutoff:
+            log("  out of window (%s); not stored" % record["published_at"])
             continue
 
         prior = stored.get(item["id"])
