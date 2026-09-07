@@ -116,7 +116,7 @@ git checkout b192338 -- data/posts.json
 ```
 
 The 14 junk commits were left in history. Rewriting published history to hide a bad
-afternoon is not worth it, and the log above is a better artifact than a clean one.
+morning is not worth it, and the log above is a better artifact than a clean one.
 
 ### Three root causes, all architectural
 
