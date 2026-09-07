@@ -61,6 +61,13 @@ Claude-Blog-Condenser/
   the agent then files a GitHub issue (see the failure protocol in
   `agent/task-prompt.md`). A run that writes nothing is a good outcome; a run that
   commits malformed data is not.
+- **Credentials.** Only the summary step needs one. `sync.py` takes
+  `ANTHROPIC_API_KEY`, else `ANTHROPIC_AUTH_TOKEN`, else the `ant` CLI's stored
+  OAuth profile from `ant auth login` — which it refreshes itself, so a local run
+  or a local schedule needs no API key at all. A cloud sandbox cannot use the
+  profile (`ant auth login` is interactive), so a scheduled Managed Agent run
+  needs a key or token supplied through the vault. With no credential the script
+  aborts cleanly and commits nothing.
 - **Models.** The runner is Haiku 4.5 at the lowest available effort — it starts a
   subprocess and reads an exit code. Summarization inside `sync.py` is also Haiku 4.5,
   given one narrow job, no tools, and a validated output. Changing `SUMMARY_MODEL` in

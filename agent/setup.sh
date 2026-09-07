@@ -24,11 +24,21 @@ set -euo pipefail
 [ -f ../.env ] && . ../.env
 : "${GITHUB_TOKEN:?set GITHUB_TOKEN in ../.env or the environment}"
 
-# sync.py calls the Messages API to write TL;DRs, so the SESSION SANDBOX needs an
-# ANTHROPIC_API_KEY of its own - the agent's own inference credential is not
-# exposed to the `bash` tool. Wire it through the vault/environment config below
-# and confirm it is visible in the sandbox before relying on a scheduled run;
-# without it sync.py aborts cleanly (exit 1) whenever there are new posts.
+# sync.py calls the Messages API to write TL;DRs, and the agent's own inference
+# credential is NOT exposed to the `bash` tool, so the script needs a credential
+# of its own. It resolves one in this order (sync.py: resolve_auth):
+#
+#   1. ANTHROPIC_API_KEY
+#   2. ANTHROPIC_AUTH_TOKEN
+#   3. the `ant` CLI's stored OAuth profile (`ant auth login`), refreshed
+#      automatically via `ant auth print-credentials --access-token`
+#
+# Locally, 3 is enough - no key to mint or rotate, and the stored refresh token
+# keeps it working unattended. In a CLOUD SANDBOX only 1 or 2 apply: `ant auth
+# login` is interactive and the profile is not mounted there. Wire one through
+# the vault below and confirm it is visible in the sandbox before relying on a
+# scheduled run; without any credential sync.py aborts cleanly (exit 1) whenever
+# there are new posts, and commits nothing.
 case "$GITHUB_TOKEN" in
   ghp_xxx|*REPLACE_ME*)
     echo "error: GITHUB_TOKEN is still the .env.example placeholder." >&2
