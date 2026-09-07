@@ -39,9 +39,16 @@ HTTP_TIMEOUT_S = 45
 
 # Summarization. Changing SUMMARY_MODEL is the whole experiment: the runner does
 # not care which model this is, and no other stage calls the API.
-SUMMARY_MODEL = "claude-haiku-4-5-20251001"
+SUMMARY_MODEL = "claude-haiku-4-5"
 SUMMARY_MAX_TOKENS = 300
 SUMMARY_INPUT_CHAR_CAP = 24000  # bounds worst-case input cost on a long post
+TLDR_MAX_CHARS = 600            # posts.schema.json tldr maxLength
+# The prompt is given stricter limits than the validator enforces. Models drift
+# long on long posts, and a summary aimed at the exact ceiling lands just over it
+# about half the time; the headroom absorbs that drift without loosening the
+# contract, which stays at config's word bounds and the schema's 600 characters.
+TLDR_PROMPT_HEADROOM_WORDS = 8
+TLDR_PROMPT_MAX_CHARS = 480
 ANTHROPIC_VERSION = "2023-06-01"
 API_URL = "https://api.anthropic.com/v1/messages"
 
@@ -519,20 +526,31 @@ def check_figure_markers(post):
 
 # ── Summarization: the one step that needs a model ────────────────────────────
 SUMMARY_SYSTEM = (
-    "You write one-paragraph summaries of blog posts. You are given the full "
-    "body text of a single post. Reply with the summary only: no preamble, no "
-    "quotes, no bullets, no headings, no markdown."
+    "You write short, tight one-paragraph summaries of blog posts. You are given "
+    "the full body text of a single post. Reply with the summary only: no "
+    "preamble, no quotes, no bullets, no headings, no markdown. Brevity is a hard "
+    "requirement, not a preference - a summary that runs over the stated word "
+    "limit is rejected outright."
 )
 
-SUMMARY_TEMPLATE = """Write a {min_words}-{max_words} word summary of the blog post below.
+SUMMARY_TEMPLATE = """Summarize the blog post below in ONE paragraph of about \
+{target_words} words.
 
-Rules:
+Hard limits, both enforced by a validator that rejects anything outside them:
+- No fewer than {min_words} words and no more than {max_words} words.
+- No more than {max_chars} characters in total.
+
+Aim for {target_words} words, in at most two sentences. Overshooting is by far
+the most common failure here, especially on long posts: cover only the single
+main point and stop. Do not try to mention every section. Count the words before
+you answer, and if you are near the limit, cut a clause rather than trusting it.
+
+Other rules:
 - Ground it only in the body text given. No outside knowledge, no speculation
   about what a release "means".
 - Lead with what the post announces or argues. Do not start with "This post".
 - Plain prose in your own words. No bullets, no headings, no marketing tone.
 - Do not copy any run of more than eight consecutive words from the body.
-- Between {min_words} and {max_words} words. One paragraph.
 
 Title: {title}
 
@@ -556,8 +574,9 @@ def validate_summary(tldr, title, body, min_words, max_words):
     text = (tldr or "").strip()
     if not text:
         return "empty summary"
-    if len(text) > 600:
-        return "summary exceeds schema maxLength of 600 characters"
+    if len(text) > TLDR_MAX_CHARS:
+        return ("summary is %d characters, over the schema maxLength of %d"
+                % (len(text), TLDR_MAX_CHARS))
     words = len(text.split())
     if not (min_words <= words <= max_words):
         return "summary is %d words, outside %d-%d" % (words, min_words, max_words)
@@ -568,27 +587,64 @@ def validate_summary(tldr, title, body, min_words, max_words):
     return None
 
 
-def call_model(api_key, title, body, min_words, max_words):
+def resolve_auth():
+    """Return auth headers for the Messages API, or None if there is no credential.
+
+    Preferred is ANTHROPIC_API_KEY, which is what the scheduled sandbox should
+    carry. Falling back to the `ant` CLI's stored OAuth profile lets the script
+    run locally after `ant auth login` without minting a key; OAuth tokens go on
+    Authorization: Bearer with the oauth beta header, not on x-api-key. The token
+    is never logged and never passed on a command line.
+    """
+    key = os.environ.get("ANTHROPIC_API_KEY")
+    if key:
+        return {"x-api-key": key}
+    token = os.environ.get("ANTHROPIC_AUTH_TOKEN")
+    if not token:
+        try:
+            proc = subprocess.run(
+                ["ant", "auth", "print-credentials", "--access-token"],
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                text=True, timeout=30)
+            if proc.returncode == 0:
+                token = proc.stdout.strip()
+        except Exception:  # noqa: BLE001 - no credential is a clean abort, not a crash
+            token = None
+    if token:
+        return {"authorization": "Bearer " + token,
+                "anthropic-beta": "oauth-2025-04-20"}
+    return None
+
+
+def call_model(auth_headers, title, body, min_words, max_words, problem=None):
+    aim_max = max(min_words + 5, max_words - TLDR_PROMPT_HEADROOM_WORDS)
+    prompt = SUMMARY_TEMPLATE.format(
+        min_words=min_words, max_words=aim_max, title=title,
+        target_words=(min_words + aim_max) // 2,
+        max_chars=TLDR_PROMPT_MAX_CHARS,
+        body=body[:SUMMARY_INPUT_CHAR_CAP])
+    if problem:
+        prompt += ("\n\nYour previous attempt was rejected: %s. "
+                   "Write a shorter one that satisfies every limit above."
+                   % problem)
     payload = {
         "model": SUMMARY_MODEL,
         "max_tokens": SUMMARY_MAX_TOKENS,
         "system": SUMMARY_SYSTEM,
-        "messages": [{"role": "user", "content": SUMMARY_TEMPLATE.format(
-            min_words=min_words, max_words=max_words, title=title,
-            body=body[:SUMMARY_INPUT_CHAR_CAP])}],
+        "messages": [{"role": "user", "content": prompt}],
     }
+    headers = {"content-type": "application/json",
+               "anthropic-version": ANTHROPIC_VERSION}
+    headers.update(auth_headers)
     req = urllib.request.Request(
-        API_URL, data=json.dumps(payload).encode("utf-8"),
-        headers={"content-type": "application/json",
-                 "x-api-key": api_key,
-                 "anthropic-version": ANTHROPIC_VERSION})
+        API_URL, data=json.dumps(payload).encode("utf-8"), headers=headers)
     with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT_S) as resp:
         data = json.loads(resp.read().decode("utf-8"))
     return "".join(b.get("text", "") for b in data.get("content", [])
                    if b.get("type") == "text").strip()
 
 
-def summarize(api_key, post, min_words, max_words):
+def summarize(auth_headers, post, min_words, max_words):
     """One API call per post. At most MAX_ATTEMPTS; then skip the post.
 
     A response that arrives but fails validation consumes an attempt rather than
@@ -597,8 +653,8 @@ def summarize(api_key, post, min_words, max_words):
     last = None
     for i in range(1, MAX_ATTEMPTS + 1):
         try:
-            text = call_model(api_key, post["title"], post["body_text"],
-                              min_words, max_words)
+            text = call_model(auth_headers, post["title"], post["body_text"],
+                              min_words, max_words, problem=last)
         except Exception as exc:  # noqa: BLE001
             last = "API call failed: %s" % exc
             log("  summary attempt %d/%d: %s" % (i, MAX_ATTEMPTS, last))
@@ -895,11 +951,12 @@ def run(argv):
         % (len(new_ids), len(changed_ids), len(pruned), len(todo)))
 
     # Stage 4-5: fetch, extract, summarize. Budget re-checked before every post.
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if todo and not api_key:
+    auth_headers = resolve_auth() if todo else None
+    if todo and not auth_headers:
         raise AbortRun(
-            "ANTHROPIC_API_KEY is not set, and %d post(s) need a summary. "
-            "Set it in the environment before running." % len(todo))
+            "no API credential found, and %d post(s) need a summary. Set "
+            "ANTHROPIC_API_KEY in the environment (or run `ant auth login`)."
+            % len(todo))
 
     fetched, changed_count = {}, 0
     for item in todo:
@@ -928,7 +985,7 @@ def run(argv):
             continue
 
         try:
-            record["tldr"] = summarize(api_key, record, min_words, max_words)
+            record["tldr"] = summarize(auth_headers, record, min_words, max_words)
         except SkipPost as exc:
             log("  skipped: %s" % exc)
             skipped.append({"id": item["id"], "reason": str(exc)})

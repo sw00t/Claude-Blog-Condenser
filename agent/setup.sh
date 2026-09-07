@@ -42,7 +42,7 @@ ENVIRONMENT_ID="REPLACE_ME"        # env_... from `ant beta:environments create`
 VAULT_ID="REPLACE_ME"              # vlt_... containing the GitHub MCP credential (README step 5)
 TIMEZONE="Etc/UTC"                 # IANA tz; avoid 1-3 AM local if you change it (DST)
 CRON="0 6 * * *"                   # daily 06:00 in $TIMEZONE
-MODEL="claude-haiku-4-5-20251001"  # The agent only runs sync.py and reports its exit code.
+MODEL="claude-haiku-4-5"  # The agent only runs sync.py and reports its exit code.
                                    # There is no judgment left in the loop, so Sonnet reasoning
                                    # buys nothing here. Summarization happens inside sync.py and
                                    # picks its own model (SUMMARY_MODEL) independently of this.
