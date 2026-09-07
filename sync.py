@@ -50,6 +50,31 @@ SUMMARY_MAX_TOKENS = 300
 # front. Raise this if summaries of long posts start missing the point.
 SUMMARY_INPUT_CHAR_CAP = 16000
 TLDR_MAX_CHARS = 600            # posts.schema.json tldr maxLength
+
+# Prompt caching. The only repeated content in this workload is a retry: attempt
+# 2 resends the identical system + rules + body and appends the validator's
+# reason. A cache breakpoint after the body lets that second call read the whole
+# prefix instead of paying for it again.
+#
+# Measured 2026-09-07 and left OFF, because it cannot pay here:
+#
+# 1. Haiku 4.5 has a 4096-token minimum cacheable prefix. The longest stored post
+#    truncated to SUMMARY_INPUT_CHAR_CAP measured 3707 prompt tokens - under the
+#    threshold, so the marker silently no-ops (cache_creation_input_tokens: 0,
+#    confirmed against the live API). Median posts are far smaller again.
+# 2. Clearing 4096 means sending MORE body text to enable the cache, which costs
+#    more input on every call than the cache returns on a minority of retries.
+# 3. A write costs 1.25x and a read 0.1x, so with retry probability p the expected
+#    input cost is 1.25 + 0.1p cached against 1.0 + p uncached: caching only wins
+#    when p > ~0.28, and the calibrated prompt now lands attempt 1 most of the time.
+# 4. Nothing else is cacheable. The shared system + rules prefix is ~300 tokens,
+#    an order of magnitude under the threshold, and padding it to qualify costs
+#    more than caching saves.
+#
+# Flip to True if the model, its threshold, or the retry rate changes; the run
+# log reports the retry rate against the break-even every run.
+ENABLE_PROMPT_CACHE = False
+CACHE_BREAKEVEN_RETRY_RATE = 0.28
 # The prompt is given stricter limits than the validator enforces. Models drift
 # long on long posts, and a summary aimed at the exact ceiling lands just over it
 # about half the time; the headroom absorbs that drift without loosening the
@@ -73,6 +98,36 @@ MONTHS = {m: i for i, m in enumerate(
 # Management", "Share the results"). Substring matching here discards good posts.
 CHROME_MARKERS = ["Reading time", "Copy link", "Share", "Category",
                   "Related posts", "Subscribe", "min", "Author(s)"]
+
+
+class _Usage:
+    """Per-run API token totals, so cost is observable rather than assumed."""
+
+    def __init__(self):
+        self.calls = self.retries = 0
+        self.uncached_in = self.cache_write = self.cache_read = self.out = 0
+
+    def add(self, usage, retry=False):
+        self.calls += 1
+        self.retries += 1 if retry else 0
+        self.uncached_in += usage.get("input_tokens", 0)
+        self.cache_write += usage.get("cache_creation_input_tokens", 0)
+        self.cache_read += usage.get("cache_read_input_tokens", 0)
+        self.out += usage.get("output_tokens", 0)
+
+    def summary(self):
+        if not self.calls:
+            return "no API calls"
+        # Haiku 4.5: $1/MTok in, $5/MTok out; writes bill 1.25x, reads 0.1x.
+        cost = ((self.uncached_in + 1.25 * self.cache_write
+                 + 0.10 * self.cache_read) / 1e6) + (self.out * 5 / 1e6)
+        return ("%d call(s), %d retry(ies) | in %d uncached / %d cache-write / "
+                "%d cache-read | out %d | ~$%.4f"
+                % (self.calls, self.retries, self.uncached_in, self.cache_write,
+                   self.cache_read, self.out, cost))
+
+
+RUN_USAGE = _Usage()
 
 
 class AbortRun(Exception):
@@ -630,15 +685,21 @@ def call_model(auth_headers, title, body, min_words, max_words, problem=None):
         target_words=(min_words + aim_max) // 2,
         max_chars=TLDR_PROMPT_MAX_CHARS,
         body=body[:SUMMARY_INPUT_CHAR_CAP])
+    # The correction goes in its own block AFTER the cache breakpoint, so the
+    # retry's prefix is byte-identical to the first attempt's and reads from cache.
+    block = {"type": "text", "text": prompt}
+    if ENABLE_PROMPT_CACHE:
+        block["cache_control"] = {"type": "ephemeral"}
+    content = [block]
     if problem:
-        prompt += ("\n\nYour previous attempt was rejected: %s. "
-                   "Write a shorter one that satisfies every limit above."
-                   % problem)
+        content.append({"type": "text", "text":
+                        "Your previous attempt was rejected: %s. Write a shorter "
+                        "one that satisfies every limit above." % problem})
     payload = {
         "model": SUMMARY_MODEL,
         "max_tokens": SUMMARY_MAX_TOKENS,
         "system": SUMMARY_SYSTEM,
-        "messages": [{"role": "user", "content": prompt}],
+        "messages": [{"role": "user", "content": content}],
     }
     headers = {"content-type": "application/json",
                "anthropic-version": ANTHROPIC_VERSION}
@@ -647,8 +708,9 @@ def call_model(auth_headers, title, body, min_words, max_words, problem=None):
         API_URL, data=json.dumps(payload).encode("utf-8"), headers=headers)
     with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT_S) as resp:
         data = json.loads(resp.read().decode("utf-8"))
-    return "".join(b.get("text", "") for b in data.get("content", [])
+    text = "".join(b.get("text", "") for b in data.get("content", [])
                    if b.get("type") == "text").strip()
+    return text, data.get("usage") or {}
 
 
 def summarize(auth_headers, post, min_words, max_words):
@@ -660,8 +722,10 @@ def summarize(auth_headers, post, min_words, max_words):
     last = None
     for i in range(1, MAX_ATTEMPTS + 1):
         try:
-            text = call_model(auth_headers, post["title"], post["body_text"],
-                              min_words, max_words, problem=last)
+            text, usage = call_model(auth_headers, post["title"],
+                                     post["body_text"], min_words, max_words,
+                                     problem=last)
+            RUN_USAGE.add(usage, retry=(i > 1))
         except Exception as exc:  # noqa: BLE001
             last = "API call failed: %s" % exc
             log("  summary attempt %d/%d: %s" % (i, MAX_ATTEMPTS, last))
@@ -1078,6 +1142,12 @@ def run(argv):
              os.path.relpath(sync_path, REPO_ROOT)],
             do_push=not no_push)
 
+    log("api usage: %s" % RUN_USAGE.summary())
+    if RUN_USAGE.calls:
+        rate = RUN_USAGE.retries / float(RUN_USAGE.calls)
+        log("retry rate %.0f%% vs %.0f%% caching break-even (cache %s)"
+            % (rate * 100, CACHE_BREAKEVEN_RETRY_RATE * 100,
+               "on" if ENABLE_PROMPT_CACHE else "off"))
     log("done in %.1fs | commits: %d | exit 0" % (budget.elapsed(), 1 if sha else 0))
     return 0
 
