@@ -1,10 +1,8 @@
 {
-  "ran_at": "2026-08-29T06:04:57Z",
+  "ran_at": "2026-09-07T14:07:28Z",
   "source_url": "https://claude.com/blog",
   "window_days": 180,
-  "counts": { "discovered": 15, "new": 3, "changed": 4, "unchanged": 37, "pruned": 0, "skipped": 0 },
+  "counts": { "discovered": 15, "new": 2, "changed": 0, "unchanged": 44, "pruned": 0, "skipped": 0 },
   "skipped": [],
-  "notes": [
-    "4 stored TL;DRs (computer-use-skills-api-files-api, bringing-mcp-2026-07-28-to-claude, four-role-based-claude-certifications, claude-managed-agents) contained mechanical verbatim slices of their body_text and were rewritten in place during the step 6 anti-slice check; their body_text and content_hash are unchanged."
-  ]
+  "notes": []
 }
