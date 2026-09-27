@@ -1,6 +1,6 @@
 # Claude Blog Condenser
 
-A daily agent mirrors the [claude.com/blog](https://claude.com/blog) front page into a
+A scheduled agent mirrors the [claude.com/blog](https://claude.com/blog) front page into a
 JSON file, writes a 25 to 60 word summary for each new post, and commits the result. A
 static PWA renders that file as dense, text-first reading that works offline. There is
 no backend, no database, and no server: **the git repo is the state store**, and GitHub
@@ -326,6 +326,11 @@ sync actually ran.
 
 ## Operations
 
+**Current schedule: Tuesdays at 09:00 Pacific** (`0 9 * * 2`, `America/Los_Angeles`), plus
+manual runs on demand. This is temporary while I iron out some wrinkles. At 6 new
+posts per run, a backlog on a weekly schedule clears slowly, so a few manual runs catch
+it up faster.
+
 ```sh
 ant beta:deployment-runs list --deployment-id $DEPLOYMENT_ID --has-error  # failures only
 ant beta:deployments pause   --deployment-id $DEPLOYMENT_ID
@@ -356,7 +361,7 @@ ant beta:deployments update --deployment-id $DEPLOYMENT_ID \
 
 - **Retention is `window_days` in `config.json`** (currently 35). Because that window is
   shorter than the depth of page 1, posts age out while still visible on the blog, so
-  most days produce a prune commit even with no new posts. That is the rolling-window
+  most runs produce a prune commit even with no new posts. That is the rolling-window
   design working, not a fault.
 - **MCP tools must be `always_allow` for unattended runs.** An `mcp_toolset` left at its
   default evaluates to `ask`: the session goes idle with `stop_reason: requires_action`
