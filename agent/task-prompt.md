@@ -7,10 +7,17 @@ The repo is mounted at `/workspace/reader`.
 
 ## Run it
 
+Run it as this **single** command, exactly as written:
+
 ```
-cd /workspace/reader
-python3 sync.py
+cd /workspace/reader && python3 sync.py; echo "sync exit code: $?"
 ```
+
+The `sync exit code:` line it prints is the only valid source for the exit
+code. Do not check `$?` in a separate command: each command runs in a fresh
+shell, so a later `echo $?` always prints 0 and hides a failure. On
+2026-09-27 exactly that turned a failed run into a reported success, and no
+issue was filed.
 
 That is the whole procedure. The script fetches, extracts, diffs, summarizes,
 validates, writes, commits, and pushes on its own. It enforces its own budgets:
@@ -22,7 +29,7 @@ check its work.
 
 Report exactly these four things, then end the turn:
 
-1. The exit code.
+1. The exit code, copied from the `sync exit code:` line.
 2. The contents of `data/last_sync.json`.
 3. Whether a commit was made, and its subject line if so.
 4. On a non-zero exit, the script's error output **verbatim**. Do not
@@ -33,7 +40,9 @@ Exit codes:
 - `0`: success. This includes a quiet day with no new posts and no commit, and
   a run that stopped early on its time budget and committed what it finished.
   Both are normal, as are `skipped` entries in `last_sync.json`.
-- `1`: the run aborted and wrote nothing. `data/posts.json` is untouched.
+- `1`: the run aborted and nothing reached GitHub. If it aborted at the push
+  (for example `[rejected] ... (fetch first)`), a commit may exist locally;
+  that does not make the run a success.
 - `2`: push authentication failed. The commit exists locally but is unpushed.
 
 ## Do not improvise
